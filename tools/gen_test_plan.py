@@ -1,4 +1,4 @@
-"""Generates the acceptance catalog, traceability and Appendix A of TEST-PLAN-v2.md (TEST-PLAN-v1.md is the frozen earlier version).
+"""Generates the acceptance catalog, traceability and Appendix A of TEST-PLAN-v3.md (TEST-PLAN-v1.md and TEST-PLAN-v2.md are frozen earlier versions; v2 is still cited by the running M0 plan and has the same M0 content).
 Source of truth for test ids lives here; the hand-written parts of the plan live in
 docs/test-plan/_plan_head.md and _plan_tail.md."""
 import re, glob, sys, pathlib
@@ -112,7 +112,15 @@ t("AT-SRC-22","Upstream MCP adapters (AWS Knowledge, Microsoft Learn) go through
 t("AT-SRC-23","Docs-site adapter refuses hosts and paths outside its allowlist (including substring tricks) and honors robots.txt","FR-SRC-15","integration","M1")
 t("AT-SRC-24","A source with a shutdown date reports deprecated(days)","FR-SRC-14","unit","M1")
 t("AT-SRC-25","sources check --live writes refreshed fixtures to a review folder only (opt-in live test)","FR-SRC-12","live","M1")
-t("AT-SRC-26","No general web-search provider (Programmable Search, Vertex, Brave, SerpAPI) is in the registry","FR-SRC-17","unit","M1")
+t("AT-SRC-26","Every upstream endpoint v1 calls maps to a registered v2 source (table-driven from the MIGRATION tool map, with the AWS and Microsoft Learn substitution listed); defaults.toml holds site set v1_docs with v1's 26 domains and the six docs_site instances with v1's seeds and filters","FR-SRC-17, FR-SRC-18","unit","M1")
+t("AT-SRC-27","Site sets load from config and defaults; config overrides defaults; an invalid set name fails validation","FR-SRC-18","unit","M1")
+t("AT-SRC-28","Web sources are disabled until their settings and credential are present; auto selection never includes the web group; naming the group or a source id selects them","FR-SRC-19","integration","M1")
+t("AT-SRC-29","Daily cap: at budget_cap calls a web source reports budget_exhausted until the next local midnight (FakeClock) and federation skips it with that status","FR-SRC-20, FR-HLTH-12","integration","M1")
+t("AT-SRC-30","Fallback strategy: with Vertex exhausted and Brave failing, SerpAPI answers, Programmable Search reports not_needed, and only one paid query per page is spent; strategy all fans out to every configured web source; non-web sources still run in parallel within the deadline","FR-SRC-21","integration","M1")
+t("AT-SRC-31","site_set: Brave queries are split into at most 3 batches of at most 380 characters with query-named domains first; SerpAPI and Programmable Search use one query and set truncated when domains are dropped; Vertex results are filtered by host; an unknown set is invalid_argument before any call","FR-SRC-22","unit","M1")
+t("AT-SRC-32","Vertex adapter passes conformance; GoogleAdcProvider (fake loader) refreshes off the event loop; the token goes only to discoveryengine.googleapis.com with X-Goog-User-Project; static check that v2 code never opens the credential file; the refresh call is recorded as a call record","FR-SRC-23, FR-PLAT-10","integration","M1")
+t("AT-SRC-33","Brave, SerpAPI and Programmable Search adapters pass conformance; Brave sends X-Subscription-Token, Programmable Search sends x-goog-api-key and reports deprecated(days); the SerpAPI api_key never appears in logs, errors, call records or tool results","FR-SRC-19, FR-PLAT-12, FR-PLAT-13","integration","M1")
+t("AT-PLAT-13","pyproject declares the gcp extra (google-auth); base dependencies exclude google-auth; without the extra, vertex_search reports unconfigured with the install command","FR-PLAT-51, FR-SRC-07","unit","M1")
 t("AT-SRCH-30","citations merges OpenCitations, OpenAlex and Semantic Scholar, dedupes by DOI, fills titles and pages","FR-SRCH-20","integration","M1")
 t("AT-SRCH-31","authors merges OpenAlex, ORCID and DBLP records","FR-SRCH-21","integration","M1")
 t("AT-SRCH-32","cite exports BibTeX, CSL-JSON, RIS and text; non-DOI works format from the CSL snapshot; unknown style or format is rejected","FR-SRCH-22","integration","M1")
@@ -130,6 +138,8 @@ t("AT-HLTH-20","Credential states: ok, expiring_soon, invalid, missing, quota_lo
 t("AT-HLTH-21","GitHub expiry header and /rate_limit update expires_at and quota","FR-HLTH-21","integration","M1")
 t("AT-HLTH-22","Keys without expiry get rotate_by 180 days after Keychain modification unless overridden","FR-HLTH-22","unit","M1")
 t("AT-HLTH-23","Fix text names the Keychain item, the provider page and a security command with no value","FR-HLTH-24","unit","M1")
+t("AT-HLTH-24","Google sign-in states from fakes: no sign-in is missing; refused refresh, SERVICE_DISABLED and PERMISSION_DENIED are invalid with their reason; fix text gives gcloud auth application-default login; metadata holds account email and token expiry only; token renewal never raises expiring_soon","FR-HLTH-25","unit","M1")
+t("AT-HLTH-25","Metered sources validate with free methods where they exist (SerpAPI account endpoint, Vertex engine metadata); Brave and Programmable Search probes run at most once per 24 h; Brave rate-limit headers update quota","FR-HLTH-21","integration","M1")
 t("AT-HLTH-30","Notifications fire on state changes and expiry milestones (14, 7, 3, 1 days) only once each","FR-HLTH-30","integration","M1")
 t("AT-HLTH-31","Unresolved items roll into one daily digest","FR-HLTH-31","integration","M1")
 t("AT-HLTH-32","macOS notifier argv uses terminal-notifier -execute research-mcp ui --path (no token anywhere in argv), osascript fallback; webhook payload carries the Keychain token in a header, never in the URL","FR-HLTH-32, FR-UI-02, NFR-03","unit","M1")
@@ -202,9 +212,10 @@ t("AT-UI-19","Settings page shows effective config and names only for credential
 # ---------- M4 ----------
 t("AT-MIG-01","secrets import reads fake client configs, writes Keychain items through a fake provider, prints names and fingerprints only","FR-MIG-01","integration","M4")
 t("AT-MIG-02","Conflicting values for one name stop the import for that name and ask","FR-MIG-02","integration","M4")
-t("AT-MIG-03","Unused v1 credentials, including every web-search key, are reported as not imported","FR-MIG-03, FR-SRC-17","unit","M4")
+t("AT-MIG-03","The Brave, SerpAPI and shared Google keys are imported; a v1 credential no v2 source uses is reported as not imported and not copied","FR-MIG-03","unit","M4")
 t("AT-MIG-04","secrets import is idempotent and --dry-run writes nothing","FR-MIG-04","integration","M4")
 t("AT-MIG-05","scrub-client-configs backs up each file and removes only v1 env values after confirmation","FR-MIG-05","integration","M4")
+t("AT-MIG-06","v1 web-search settings become config: VERTEX_AI_* gives instance vertex_v1, GOOGLE_PSE_CX gives sources.google_pse.engine_id, a named v1 provider goes first in web.order; every written setting is printed","FR-MIG-06","unit","M4")
 t("AT-MIG-10","import-legacy opens the v1 database immutable and leaves the v1 folder byte-for-byte unchanged","FR-MIG-10, FR-MIG-15","integration","M4")
 t("AT-MIG-11","On a synthetic v1 database with the 54-pair pattern, 10 URL rows and harv and penn ids, the import produces the expected works, HTML documents and legacy ids","FR-MIG-11","integration","M4")
 t("AT-MIG-12","Re-extraction is used; v1 chunks are imported only where it fails","FR-MIG-12","integration","M4")
@@ -221,13 +232,14 @@ OWNER = [
 ("OC-03","On the Mac: a real macOS notification for a forced credential state opens the right UI page","FR-HLTH-32","M1"),
 ("OC-04","On the Mac: one real archive written to the Drive folder, visible in Drive on the web","FR-CACHE-45, FR-CACHE-47","M2"),
 ("OC-05","Owner walkthrough of every UI page","FR-UI-10, FR-UI-19","M3"),
-("OC-06","Cutover steps 1 to 9 of MIGRATION-v1 completed","FR-MIG-20, FR-MIG-21, FR-MIG-23","M4"),
+("OC-06","Cutover steps 1 to 9 of MIGRATION-v2 completed","FR-MIG-20, FR-MIG-21, FR-MIG-23","M4"),
 ("OC-07","14 days on v2 with no fallback; owner approves retiring v1","FR-MIG-24","M4"),
 ("OC-08","CI on GitHub Actions (macOS and Linux, 3.12 and 3.13) with secret scan and weekly audit, once a remote exists","FR-PLAT-53","M1"),
 ("OC-09","Upgrade with a forced doctor failure rolls back","FR-PLAT-55","M3"),
 ("OC-10","Nightly state backup present for 3 days; optional Drive copy","FR-PLAT-57","M2"),
 ("OC-11","A new free source added by an agent in one work unit, touching only the allowed files","FR-SRC-16, G3","M1"),
 ("OC-12","Five-source live search p95 under 8 s over 20 runs","G2, FR-SRCH-03","M1"),
+("OC-14","On the Mac: a web-group search with site_set v1_docs returns results through the Vertex engine with the owner's Google sign-in; doctor shows the sign-in ok","FR-SRC-19, FR-SRC-23, FR-HLTH-25","M1"),
 ]
 
 def latest(paths):
@@ -303,10 +315,10 @@ if __name__=="__main__":
     head=open(ROOT/'docs/test-plan/_plan_head.md').read()
     tail=open(ROOT/'docs/test-plan/_plan_tail.md').read()
     text=head.rstrip()+"\n\n"+body+"\n"+tail.lstrip()
-    target=ROOT/'docs/test-plan/TEST-PLAN-v2.md'
+    target=ROOT/'docs/test-plan/TEST-PLAN-v3.md'
     if "--check" in sys.argv:
         if not target.exists() or target.read_text()!=text:
-            print("TEST-PLAN-v2.md is stale; run tools/gen_test_plan.py"); sys.exit(1)
+            print("TEST-PLAN-v3.md is stale; run tools/gen_test_plan.py"); sys.exit(1)
     else:
         target.write_text(text)
     ids=[x[0] for x in T]
