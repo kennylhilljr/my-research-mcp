@@ -1,0 +1,19 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install Python and dependencies from the lock file
+        run: uv sync --frozen
+      - name: Full CI (lint, types, tests with coverage gate, build, smoke test)
+        run: tools/ci.sh
