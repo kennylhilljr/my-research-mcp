@@ -1,0 +1,13 @@
+{
+  "repo": "~/Documents/GitHub/my-research-mcp-v2",
+  "target_branch": "main",
+  "certifications": "~/.local/share/openclaw-ecc-orchestrator/runtime/.orchestration/runtime/cert-latest.json",
+  "repo_checks": {
+    "required": [
+      "unit-tests"
+    ],
+    "commands": {
+      "unit-tests": "uv run pytest -q"
+    }
+  }
+}

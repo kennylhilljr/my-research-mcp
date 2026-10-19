@@ -1,0 +1,686 @@
+{
+ "units": [
+  {
+   "schema_version": "1.0",
+   "id": "M0-01",
+   "title": "Repository scaffold, packages and CI script",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-01), following the LLD sections it implements (1, 12.1) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-01, AT-PLAT-02, AT-PLAT-03, AT-PLAT-05, AT-PLAT-04; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [],
+   "scope": {
+    "files": [
+     "pyproject.toml",
+     "uv.lock",
+     ".python-version",
+     "src/research_mcp/__init__.py",
+     "src/research_mcp/version.py",
+     "src/research_mcp/core/__init__.py",
+     "src/research_mcp/platform/__init__.py",
+     "src/research_mcp/sources/__init__.py",
+     "src/research_mcp/services/__init__.py",
+     "src/research_mcp/mcp_app/__init__.py",
+     "src/research_mcp/ui/__init__.py",
+     "src/research_mcp/testing/__init__.py",
+     "tools/ci.sh",
+     ".github/workflows/ci.yml",
+     "tests/conftest.py",
+     "tests/unit/test_version.py",
+     "tests/unit/test_import_side_effects.py",
+     "tests/unit/test_network_guard.py",
+     "src/research_mcp/packaging/__init__.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv sync --frozen",
+     "uv run pytest tests/unit -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-02",
+   "title": "Identifier normalization",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-02), following the LLD sections it implements (6 (`core/ids.py`)) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SRCH-10, AT-SRCH-11, AT-SRCH-12, AT-SRCH-13, AT-SRCH-14, AT-SRCH-15, AT-SRCH-16; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-01"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/core/ids.py",
+     "tests/unit/core/test_ids.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/core/test_ids.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "medium",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 1,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-03",
+   "title": "Specs, models, errors, envelope, budget and test clock",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-03), following the LLD sections it implements (3.7 (types, `HttpError`, context), 4 (`core/specs.py`, `core/models.py`)) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-30, AT-PLAT-31, AT-PLAT-32, AT-PLAT-33, AT-PLAT-06, AT-PLAT-34; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-02"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/core/specs.py",
+     "src/research_mcp/core/models.py",
+     "src/research_mcp/core/errors.py",
+     "src/research_mcp/core/context.py",
+     "src/research_mcp/core/envelope.py",
+     "src/research_mcp/core/budget.py",
+     "src/research_mcp/core/timeutil.py",
+     "src/research_mcp/testing/clock.py",
+     "tests/unit/core/test_envelope.py",
+     "tests/unit/core/test_budget.py",
+     "tests/unit/core/test_models.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/core/test_envelope.py tests/unit/core/test_budget.py tests/unit/core/test_models.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "medium",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 1,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-04",
+   "title": "Settings and paths",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-04), following the LLD sections it implements (2) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-08, AT-PLAT-09, AT-PLAT-10, AT-PLAT-11; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-01"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/settings.py",
+     "tests/unit/test_settings.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/test_settings.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "medium",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 1,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-05",
+   "title": "Secrets and Keychain provider",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-05), following the LLD sections it implements (3.1) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-12, AT-SEC-01, AT-SEC-02, AT-SEC-13, AT-SEC-03, AT-SEC-04; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-04"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/platform/secrets.py",
+     "tests/unit/platform/test_secrets.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/platform/test_secrets.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-06",
+   "title": "Redaction and structured logging",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-06), following the LLD sections it implements (3.2) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SEC-05, AT-SEC-06, AT-SEC-14, AT-SEC-07, AT-PLAT-40, AT-PLAT-41, AT-PLAT-42; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-05"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/platform/redact.py",
+     "src/research_mcp/platform/logging.py",
+     "tests/unit/platform/test_redact.py",
+     "tests/unit/platform/test_logging.py",
+     "tests/security/test_no_secret_in_logs.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/platform/test_redact.py tests/unit/platform/test_logging.py tests/security/test_no_secret_in_logs.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-07",
+   "title": "Async HTTP client, rate limits and downloader",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-07), following the LLD sections it implements (3.3, 3.4) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-35, AT-PLAT-36, AT-PLAT-37, AT-PLAT-38, AT-PLAT-39, AT-SEC-08, AT-SEC-09, AT-SEC-10, AT-CACHE-01, AT-CACHE-02; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-03",
+    "M0-06"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/platform/http.py",
+     "src/research_mcp/platform/download.py",
+     "src/research_mcp/platform/ratelimit.py",
+     "tests/unit/platform/test_http.py",
+     "tests/unit/platform/test_ratelimit.py",
+     "tests/unit/platform/test_downloader.py",
+     "tests/security/test_scoped_credentials.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/platform/test_http.py tests/unit/platform/test_ratelimit.py tests/unit/platform/test_downloader.py tests/security/test_scoped_credentials.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-08",
+   "title": "Stores and migrations",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-08), following the LLD sections it implements (3.5, 8.1, 10.1) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-50, AT-PLAT-51, AT-PLAT-52, AT-PLAT-53; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-03"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/platform/stores.py",
+     "src/research_mcp/platform/migrations/state/0001_init.sql",
+     "src/research_mcp/platform/migrations/cache/0001_init.sql",
+     "tests/unit/platform/test_stores.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/platform/test_stores.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-09",
+   "title": "Source contract, registry and conformance suite",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-09), following the LLD sections it implements (4 (`sources/base.py`), 5.1, 5.2) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SRC-01, AT-SRC-02, AT-SRC-03, AT-SRC-04, AT-SRC-05, AT-SRC-06, AT-SRC-07; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-02",
+    "M0-07"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/sources/base.py",
+     "src/research_mcp/sources/registry.py",
+     "src/research_mcp/testing/adapters.py",
+     "tests/sources/conftest.py",
+     "tests/sources/test_conformance.py",
+     "tests/unit/sources/test_registry.py",
+     "tests/unit/sources/test_adapter_imports.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/sources/test_conformance.py tests/unit/sources/test_registry.py tests/unit/sources/test_adapter_imports.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-10",
+   "title": "arXiv adapter",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-10), following the LLD sections it implements (4, 5.2) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SRC-10; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-09"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/sources/arxiv.py",
+     "tests/sources/arxiv/test_arxiv.py",
+     "tests/sources/arxiv/fixtures/search_ok.xml",
+     "tests/sources/arxiv/fixtures/search_empty.xml",
+     "tests/sources/arxiv/fixtures/get_ok.xml",
+     "tests/sources/arxiv/fixtures/err_429.json",
+     "tests/sources/arxiv/fixtures/err_5xx.json",
+     "tests/sources/arxiv/fixtures/malformed.xml",
+     "tests/sources/arxiv/fixtures/oversize.marker"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/sources/arxiv/test_arxiv.py -q",
+     "uv run pytest tests/sources/test_conformance.py -k arxiv -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "medium",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 1,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-11",
+   "title": "Crossref adapter",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-11), following the LLD sections it implements (4, 5.2) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SRC-11; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-09"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/sources/crossref.py",
+     "tests/sources/crossref/test_crossref.py",
+     "tests/sources/crossref/fixtures/search_ok.json",
+     "tests/sources/crossref/fixtures/search_empty.json",
+     "tests/sources/crossref/fixtures/get_ok.json",
+     "tests/sources/crossref/fixtures/err_429.json",
+     "tests/sources/crossref/fixtures/err_5xx.json",
+     "tests/sources/crossref/fixtures/malformed.json",
+     "tests/sources/crossref/fixtures/oversize.marker"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/sources/crossref/test_crossref.py -q",
+     "uv run pytest tests/sources/test_conformance.py -k crossref -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "medium",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 1,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-12",
+   "title": "OpenAlex adapter",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-12), following the LLD sections it implements (4, 5.2) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SRC-12; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-09"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/sources/openalex.py",
+     "tests/sources/openalex/test_openalex.py",
+     "tests/sources/openalex/fixtures/search_ok.json",
+     "tests/sources/openalex/fixtures/search_empty.json",
+     "tests/sources/openalex/fixtures/get_ok.json",
+     "tests/sources/openalex/fixtures/err_429.json",
+     "tests/sources/openalex/fixtures/err_5xx.json",
+     "tests/sources/openalex/fixtures/malformed.json",
+     "tests/sources/openalex/fixtures/oversize.marker"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/sources/openalex/test_openalex.py -q",
+     "uv run pytest tests/sources/test_conformance.py -k openalex -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "medium",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 1,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-13",
+   "title": "Grouping, merge and federation service",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-13), following the LLD sections it implements (6 (`services/works.py`), 7.1) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SRCH-01, AT-SRCH-02, AT-SRCH-03, AT-SRCH-04, AT-SRCH-05, AT-SRCH-06, AT-SRCH-07, AT-SRCH-08, AT-SRCH-09, AT-SRCH-17; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-09"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/services/federation.py",
+     "src/research_mcp/services/works.py",
+     "tests/services/test_federation.py",
+     "tests/services/test_works.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/services/test_federation.py tests/services/test_works.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-14",
+   "title": "MCP app: M0 tools, the sources resource and `@tool_boundary`",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-14), following the LLD sections it implements (3.7 (`tool_boundary`), 7.2 (M0 rows), 7.3 (M0 row), 7.4 (`build_mcp`)) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-SRCH-20, AT-SRCH-21, AT-SRCH-22, AT-SRCH-23, AT-SRC-08, AT-PLAT-60, AT-PLAT-61, AT-PLAT-62, AT-PLAT-63; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-08",
+    "M0-13"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/mcp_app/server.py",
+     "src/research_mcp/mcp_app/tools_discovery.py",
+     "src/research_mcp/mcp_app/resources.py",
+     "tests/contract/conftest.py",
+     "tests/contract/test_tools_discovery.py",
+     "tests/contract/test_tool_contract.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/contract/test_tools_discovery.py tests/contract/test_tool_contract.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-15",
+   "title": "Daemon, composition root, scheduler and stdio shim",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-15), following the LLD sections it implements (3.6 (jobs, scheduler), 7.4 (mount), 10.5 (healthz, readyz)) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-70, AT-SEC-11, AT-SEC-12, AT-PLAT-71, AT-PLAT-72, AT-PLAT-73, AT-PLAT-74, AT-PLAT-75, AT-PLAT-76, AT-PLAT-77; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-05",
+    "M0-14"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/app.py",
+     "src/research_mcp/daemon.py",
+     "src/research_mcp/shim.py",
+     "src/research_mcp/platform/auth.py",
+     "src/research_mcp/platform/jobs.py",
+     "src/research_mcp/platform/scheduler.py",
+     "src/research_mcp/testing/launchctl.py",
+     "tests/unit/test_app.py",
+     "tests/unit/test_shim.py",
+     "tests/unit/test_jobs.py",
+     "tests/unit/test_scheduler.py",
+     "tests/security/test_loopback_auth.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/test_app.py tests/unit/test_shim.py tests/unit/test_jobs.py tests/unit/test_scheduler.py tests/security/test_loopback_auth.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "high",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 2,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  },
+  {
+   "schema_version": "1.0",
+   "id": "M0-16",
+   "title": "CLI, install, doctor skeleton and launchd templates",
+   "description": "Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 (unit M0-16), following the LLD sections it implements (10.5 (doctor skeleton), 12.1 (CLI), 12.2) and the names the LLD owns. Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): AT-PLAT-80, AT-PLAT-81, AT-PLAT-82, AT-PLAT-83, AT-SRC-13, AT-HLTH-40; put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes and recorded fixtures for every external system; tests must pass with the network blocked.",
+   "depends_on": [
+    "M0-15"
+   ],
+   "scope": {
+    "files": [
+     "src/research_mcp/cli.py",
+     "src/research_mcp/packaging/launchd/local.research-mcpd.plist.template",
+     "src/research_mcp/packaging/launchd/local.research-mcp-doctor.plist.template",
+     "src/research_mcp/packaging/launchd/local.research-mcp-watchdog.plist.template",
+     "tools/gen_inventory.py",
+     "docs/generated/sources.md",
+     "tests/unit/test_cli.py",
+     "tests/unit/test_install.py"
+    ]
+   },
+   "acceptance": {
+    "commands": [
+     "uv run pytest tests/unit/test_cli.py tests/unit/test_install.py -q",
+     "tools/ci.sh --python-only"
+    ]
+   },
+   "risk": "medium",
+   "capabilities": {
+    "network": true,
+    "secrets": []
+   },
+   "routing": {
+    "initial_tier": 1,
+    "maximum_tier": 2,
+    "reviewer_must_differ_from_author": true
+   },
+   "budget": {
+    "attempts": 3,
+    "minutes": 240,
+    "maximum_cost_usd": 10.0
+   },
+   "rollback": "revert the unit branch; nothing outside this repository changes"
+  }
+ ]
+}

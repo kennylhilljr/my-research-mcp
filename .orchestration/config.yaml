@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "high_risk_paths": [
+    "src/research_mcp/platform/secrets.py",
+    "src/research_mcp/platform/redact.py",
+    "src/research_mcp/platform/http.py",
+    "src/research_mcp/platform/stores.py",
+    "src/research_mcp/platform/migrations/**",
+    "src/research_mcp/app.py",
+    "src/research_mcp/shim.py",
+    "src/research_mcp/ui/auth.py",
+    "tests/security/**",
+    ".orchestration/**"
+  ],
+  "required_checks": [
+    "unit-tests"
+  ],
+  "protected_commands": [
+    "git push*",
+    "git reset --hard*",
+    "rm -rf*",
+    "git clean -fdx*",
+    "security *",
+    "launchctl *"
+  ],
+  "allowed_providers": [
+    "claude",
+    "codex"
+  ],
+  "budget": {
+    "max_cost_usd_per_unit": 10.0,
+    "max_cost_usd_total": 150.0,
+    "max_minutes_per_unit": 240
+  },
+  "cli_models": {
+    "claude": {
+      "economical": "haiku",
+      "standard": "sonnet",
+      "advanced": "opus"
+    },
+    "codex": {
+      "economical": "gpt-6-luna",
+      "standard": "gpt-6-astra",
+      "advanced": "gpt-6-astra"
+    }
+  },
+  "runner_costs": {
+    "claude": {
+      "economical": 0.02,
+      "standard": 0.5,
+      "advanced": 1.0
+    },
+    "codex": {
+      "economical": 0.05,
+      "standard": 0.4,
+      "advanced": 1.5
+    }
+  }
+}
