@@ -3,7 +3,7 @@
 - **Owner:** Kenny Hill
 - **Status:** Draft for owner review
 - **Date:** 2026-10-19
-- **Repository:** `my-research-mcp-v2` (new); v1 is `my-research-mcp-server`, read-only until cutover
+- **Repository:** `my-research-mcp` (new; named `my-research-mcp-v2` until 2026-10-19); v1 is `my-research-mcp-server`, read-only until cutover
 - **Inputs:** [Deep review v1](../review/REVIEW-v1.md) and its three findings files; supersedes [PRD v2](PRD-v2.md)
 - **Design:** [HLD v3](../design/HLD-v3.md), [LLD v3](../design/LLD-v3.md); **tests:** [TEST-PLAN v3](../test-plan/TEST-PLAN-v3.md); **decisions:** [ADRs](../adr/)
 

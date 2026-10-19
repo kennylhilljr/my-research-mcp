@@ -27,7 +27,7 @@ The v1 web-search providers are kept as optional v2 sources (ADR 0012): step 0 n
 
 | # | Step | Command or action | Check |
 |---|---|---|---|
-| 1 | Install v2 and the daemon | `uv tool install <path to my-research-mcp-v2>[pdf,embeddings,macos]`, then `research-mcp install` | `research-mcp doctor` shows the daemon alive |
+| 1 | Install v2 and the daemon | `uv tool install <path to my-research-mcp>[pdf,embeddings,macos]`, then `research-mcp install` | `research-mcp doctor` shows the daemon alive |
 | 2 | Set the contact email | `research-mcp config set contact.email <address>` | doctor `contact_email` ok |
 | 3 | Import credentials and web-search settings (dry run, then real) | `research-mcp secrets import --dry-run`, then `research-mcp secrets import` | Names and fingerprints listed; the Vertex instance `vertex_v1`, the Programmable Search engine id and `web.order` printed; Credentials page shows each `ok` or `unknown_expiry` |
 | 4 | Add new free keys (open decision O2) | Create OpenAlex and Semantic Scholar keys; `security add-generic-password -U -s research-mcp/OPENALEX_API_KEY -a "$USER" -w` | Source board: `openalex` ok |

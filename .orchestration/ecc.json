@@ -1,5 +1,5 @@
 {
-  "repo": "~/Documents/GitHub/my-research-mcp-v2",
+  "repo": "~/Documents/GitHub/my-research-mcp",
   "target_branch": "main",
   "certifications": "~/.local/share/openclaw-ecc-orchestrator/runtime/.orchestration/runtime/cert-latest.json",
   "repo_checks": {

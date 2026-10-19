@@ -9,7 +9,7 @@ v1 (`my-research-mcp-server`) is in daily use by three MCP clients. Its main mod
 
 ## Decision
 
-v2 is built in a new repository, `my-research-mcp-v2` (local; no remote until the owner asks). No v2 code is written into the v1 tree. v2 reads v1 only through (1) the optional legacy import, which opens the v1 index database immutable and read-only, and (2) the credential import, which reads the v1 client config `env` blocks once on the Mac and writes only to the Keychain.
+v2 is built in a new repository, `my-research-mcp` (local; no remote until the owner asks; named `my-research-mcp-v2` until 2026-10-19). No v2 code is written into the v1 tree. v2 reads v1 only through (1) the optional legacy import, which opens the v1 index database immutable and read-only, and (2) the credential import, which reads the v1 client config `env` blocks once on the Mac and writes only to the Keychain.
 
 v1 keeps running under its existing client entries until cutover (milestone M4). At cutover its entries are disabled, not deleted.
 
