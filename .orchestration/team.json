@@ -18,5 +18,25 @@
         "src/research_mcp/ui/**"
       ]
     }
+  },
+  "milestone": {
+    "name": "M0",
+    "docs": [
+      {
+        "path": "docs/prd/PRD-v4.md",
+        "sections": [
+          "10"
+        ]
+      },
+      {
+        "path": "docs/test-plan/TEST-PLAN-v3.md",
+        "sections": [
+          "8"
+        ]
+      }
+    ],
+    "gate_commands": [
+      "tools/ci.sh"
+    ]
   }
 }

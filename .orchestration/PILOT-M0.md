@@ -38,38 +38,23 @@ Both run on subscriptions. `runner_costs` in the policy only steers the split.
 7. **Model catalog.** Run `ecc catalog-refresh`. Gemini, Groq and Kimi must report `ok`; the team roles on those providers resolve their models from this snapshot. Refresh it when the weekly certification runs.
 8. **Round trip.** Run `ecc preflight`. Claude and Codex must both pass: each writes, commits, runs the gate commands and writes a valid handoff in a throwaway worktree through the exact path a unit uses.
 
-## 2. Create the run
+## 2. Create the run and drive it
 
 ```sh
 cd ~/Documents/GitHub/my-research-mcp
 ecc create-run --run-id rmcp-m0f --plan .orchestration/plan-m0.json
-ecc status --run-id rmcp-m0f
+ecc drive --run-id rmcp-m0f
 ```
 
-`create-run` shows the plan and asks you to type `yes`. Afterward only M0-01 is `ready`.
+`create-run` and `drive` each show their plan and ask for `yes`. The drive then runs the whole milestone (TEAM-DELIVERY-v2):
 
-## 3. For each ready unit
+1. The architect checks the plan against the LLD before any unit runs.
+2. Units run in dependency order (M0-01 first; the waves are in LLD 12.3). Each is dispatched to its coder, retried with a failure brief when it fails, reviewed (PR reviewer, plus security reviewer, architect or designer when the diff calls for them), verified by QA in a throwaway checkout, and merged by the agents after the gates re-run on the merged result. Reviewer, verifier and product roles rotate across Claude, Codex, Gemini, Kimi and Groq and are never the coder's provider.
+3. At the end the architect checks `main` for drift from the LLD, the delivery lead writes the retrospective, `tools/ci.sh` runs on `main`, and two product owners from different providers judge M0 against PRD section 10 and TEST-PLAN section 8.
 
-Waves follow the dependencies:
+It stops only when a unit needs you (with the delivery lead's diagnosis), when a step makes no progress, at the cost ceiling (the policy's `max_cost_usd_total`, or `--max-cost-usd`), on a blocking plan finding, or on a product rejection. `ecc status --run-id rmcp-m0f` shows each unit's state and `last_failure`; after fixing what it asks, run `ecc drive --run-id rmcp-m0f` again and it continues. The product report is in `~/.local/state/openclaw-ecc-orchestrator/reports/`.
 
-1. M0-01
-2. M0-02, M0-04 (in parallel)
-3. M0-03, M0-05 (in parallel)
-4. M0-06, M0-08 (in parallel)
-5. M0-07
-6. M0-09
-7. M0-10, M0-11, M0-12, M0-13 (in parallel)
-8. M0-14
-9. M0-15
-10. M0-16
-
-Scopes don't overlap, so the units in one wave can be dispatched from separate terminals.
-
-1. **Dispatch.** Run `ecc dispatch --run-id rmcp-m0f --unit M0-01` and confirm the plan. When the runner finishes, the orchestrator runs the unit's acceptance commands and the `unit-tests` check. The unit becomes `reviewing`, or goes back to `ready` with a failure brief (the repair loop): dispatch it again. A unit that cannot be retried (not signed in, budget spent) goes to `needs_user` with the fix in `ecc status`.
-2. **Team review.** Run `ecc team-review --run-id rmcp-m0f --unit M0-01`. The PR reviewer (plus the security reviewer, architect or designer when the diff calls for them) and then the QA verifier run, each on a provider other than the author's, rotating. If all approve, the agents approve the merge, the queue re-runs the gates on the merged result and merges into `main`. Changes requested or a failed verification send the unit back to `ready` with the findings: dispatch it again.
-3. **Clean up** a merged unit's worktree: `ecc cleanup --run-id rmcp-m0f --unit M0-01`.
-
-`ecc drive` (build step 4) will run this loop for the whole milestone with one command.
+To run one unit by hand instead: `ecc dispatch --run-id rmcp-m0f --unit <id>`, then `ecc team-review --run-id rmcp-m0f --unit <id>`.
 
 ## 4. Exit (milestone M0)
 
