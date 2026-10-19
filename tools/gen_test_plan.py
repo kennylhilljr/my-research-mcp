@@ -1,4 +1,4 @@
-"""Generates the acceptance catalog, traceability and Appendix A of TEST-PLAN-v1.md.
+"""Generates the acceptance catalog, traceability and Appendix A of TEST-PLAN-v2.md (TEST-PLAN-v1.md is the frozen earlier version).
 Source of truth for test ids lives here; the hand-written parts of the plan live in
 docs/test-plan/_plan_head.md and _plan_tail.md."""
 import re, glob, sys, pathlib
@@ -28,7 +28,7 @@ t("AT-PLAT-32","ErrorCode contains every code in PRD-platform FR-PLAT-32 and Too
 t("AT-PLAT-33","Untrusted envelope marks fetched text with untrusted=true and its source","FR-PLAT-25, NFR-06","unit","M0","M0-03")
 t("AT-PLAT-06","core.specs and core.models types validate (SourcePolicy, AuthSpec origins, SearchFilters bounds, Work, CallRecord); research_mcp.testing.clock.FakeClock advances time deterministically","FR-SRC-01, FR-PLAT-30","unit","M0","M0-03")
 t("AT-PLAT-34","Cursors are HMAC signed with a key passed in; a tampered or foreign cursor is rejected with invalid_argument","FR-SRCH-06","unit","M0","M0-03")
-t("AT-PLAT-08","Settings load from config.toml with RESEARCH_MCP_ environment overrides; invalid values fail with a clear message","FR-PLAT-08","unit","M0","M0-04")
+t("AT-PLAT-08","Settings load from config.toml with RESEARCH_MCP_ environment overrides; invalid values fail with a clear message; defaults match LLD section 2 (including cache.retention_days = 120)","FR-PLAT-08, FR-CACHE-30","unit","M0","M0-04")
 t("AT-PLAT-09","Default paths: state and cache data under ~/Library/Application Support/research-mcp (never ~/Library/Caches), models under ~/Library/Caches, logs under ~/Library/Logs; directories created with mode 0700","FR-PLAT-09, FR-CACHE-59","unit","M0","M0-04")
 t("AT-PLAT-10","A non-loopback server.host is rejected","FR-PLAT-03, NFR-07","unit","M0","M0-04")
 t("AT-PLAT-11","contact.email placeholder values (example.com, example.org, .test, .invalid) are rejected by settings validation; an unset email is allowed","FR-SRC-11, NFR-08","unit","M0","M0-04")
@@ -165,11 +165,13 @@ t("AT-CACHE-36","Discard keeps work metadata, CSL and recipe; undo within 7 days
 t("AT-CACHE-40","Archive target auto-detects the GoogleDrive folder and writes file plus sidecar with the fields in LLD 9.3","FR-CACHE-45, FR-CACHE-46","integration","M2")
 t("AT-CACHE-41","Archive verifies by reading back size and SHA-256 before removing the cached copy; a failed verify keeps the cache copy","FR-CACHE-47","integration","M2")
 t("AT-CACHE-42","Unavailable target uses the fallback, warns, and reconcile moves items later","FR-CACHE-48","integration","M2")
-t("AT-CACHE-43","Archived items are reported by library and get_work with path and date; cite works","FR-CACHE-49","integration","M2")
+t("AT-CACHE-43","Archived items keep their extraction, chunks, FTS rows and embeddings: search_cache and read return them after archiving; library and get_work report the Drive path and date; cite works","FR-CACHE-49","integration","M2")
 t("AT-CACHE-44","Archive target health covers exists, writable, privacy access, Drive app running and free space; upload state moves pending to uploaded through a fake file-provider check, and a 24-hour stall notifies","FR-CACHE-50","integration","M2")
 t("AT-CACHE-45","Collections create, add, remove, list, show; collections do not pin unless created with pin_members; pinning collections pin and unpin members","FR-CACHE-55","integration","M2")
 t("AT-CACHE-46","Disk samples, thresholds and notifications","FR-CACHE-57","integration","M2")
 t("AT-CACHE-47","Integrity checks detect corrupt FTS, missing files and orphans; fixes run only as confirmed jobs","FR-CACHE-58","integration","M2")
+t("AT-CACHE-60","archive reindex rebuilds works, identifiers and archived documents from a temp Drive folder of PDFs and sidecars, re-extracts missing text, verifies sha256, reports files without sidecars, and leaves the Drive files byte-for-byte unchanged","FR-CACHE-51","integration","M2")
+t("AT-CACHE-61","search_cache marks each hit cached, pinned or archived and filters by states; an archived hit points to its Drive path","FR-CACHE-52","contract","M2")
 t("AT-CACHE-48","library offers no discard action; only cache_review_decide and the UI can discard","FR-CACHE-35","contract","M2")
 t("AT-CACHE-49","Nightly backup copies state.db, cache.db and config.toml with the online backup API and keeps 7","FR-PLAT-57, FR-CACHE-59","integration","M2")
 t("AT-SEC-20","No MCP tool performs a hard delete","FR-PLAT-27","contract","M2")
@@ -206,7 +208,7 @@ t("AT-MIG-05","scrub-client-configs backs up each file and removes only v1 env v
 t("AT-MIG-10","import-legacy opens the v1 database immutable and leaves the v1 folder byte-for-byte unchanged","FR-MIG-10, FR-MIG-15","integration","M4")
 t("AT-MIG-11","On a synthetic v1 database with the 54-pair pattern, 10 URL rows and harv and penn ids, the import produces the expected works, HTML documents and legacy ids","FR-MIG-11","integration","M4")
 t("AT-MIG-12","Re-extraction is used; v1 chunks are imported only where it fails","FR-MIG-12","integration","M4")
-t("AT-MIG-13","Mode cache gives every item a fresh 30-day expiry","FR-MIG-13","integration","M4")
+t("AT-MIG-13","Mode cache gives every item a fresh 120-day expiry","FR-MIG-13","integration","M4")
 t("AT-MIG-14","The report contains every field in FR-MIG-14","FR-MIG-14","integration","M4")
 t("AT-MIG-20","Client config printer output for Claude desktop, Claude Code and OpenClaw","FR-MIG-20, FR-MIG-21","unit","M4")
 t("AT-MIG-21","The tool map covers all 53 v1 tools","FR-MIG-22","unit","M4")
@@ -228,10 +230,20 @@ OWNER = [
 ("OC-12","Five-source live search p95 under 8 s over 20 runs","G2, FR-SRCH-03","M1"),
 ]
 
+def latest(paths):
+    best={}
+    for f in paths:
+        m=re.match(r"(.*)-v(\d+)\.md$", f)
+        if not m: continue
+        base,n=m.group(1),int(m.group(2))
+        if base not in best or n>best[base][0]: best[base]=(n,f)
+    return [f for n,f in best.values()]
+
 def frs_in_prd():
     ids=set()
-    for f in glob.glob(str(ROOT/'docs/prd/**/*.md'),recursive=True):
-        ids|=set(re.findall(r'\b(FR-[A-Z]+-\d\d|NFR-\d\d)\b',open(f).read()))
+    for f in latest(glob.glob(str(ROOT/'docs/prd/**/*.md'),recursive=True)):
+        body=open(f).read().split("## Changes from v1")[0] + "".join(open(f).read().split("## Changes from v1")[1:])
+        ids|=set(re.findall(r'\b(FR-[A-Z]+-\d\d|NFR-\d\d)\b',body))
     return ids
 
 def split(s): return [x.strip() for x in s.split(',') if x.strip()]
@@ -291,10 +303,10 @@ if __name__=="__main__":
     head=open(ROOT/'docs/test-plan/_plan_head.md').read()
     tail=open(ROOT/'docs/test-plan/_plan_tail.md').read()
     text=head.rstrip()+"\n\n"+body+"\n"+tail.lstrip()
-    target=ROOT/'docs/test-plan/TEST-PLAN-v1.md'
+    target=ROOT/'docs/test-plan/TEST-PLAN-v2.md'
     if "--check" in sys.argv:
         if not target.exists() or target.read_text()!=text:
-            print("TEST-PLAN-v1.md is stale; run tools/gen_test_plan.py"); sys.exit(1)
+            print("TEST-PLAN-v2.md is stale; run tools/gen_test_plan.py"); sys.exit(1)
     else:
         target.write_text(text)
     ids=[x[0] for x in T]

@@ -1,6 +1,6 @@
 # Pilot: Research MCP v2 milestone M0 through the ECC orchestrator
 
-The first real workload for the orchestrator. It builds the v2 foundation (milestone M0, 16 work units from [LLD section 12.3](../docs/design/LLD-v1.md)), with Claude and Codex as authors, independent review by the other model family, merge approvals in OpenClaw, and the standing inbox processor applying them.
+The first real workload for the orchestrator. It builds the v2 foundation (milestone M0, 16 work units from [LLD v2 section 12.3](../docs/design/LLD-v2.md)), with Claude and Codex as authors, independent review by the other model family, merge approvals in OpenClaw, and the standing inbox processor applying them.
 
 | File | Purpose |
 |---|---|
@@ -28,7 +28,7 @@ Both run on subscriptions. `runner_costs` in the policy only steers the split.
 
 ## 1. Preflight (once)
 
-1. **Tools on PATH.** Check `uv --version`, `node --version` (22 or newer), `claude --version` and `codex --version`.
+1. **Tools on PATH.** Check `uv --version`, `node --version` (22 or newer), `claude --version` and `codex --version`. `claude` must be **2.1.281 or newer** (nvm's install): older versions reject `--permission-prompts`, which is how the first attempt (run `rmcp-m0`, 2026-10-19) failed in under a second. If `which -a claude` lists an older copy first, put nvm's first for this terminal: `export PATH="$(dirname "$(nvm which default)"):$PATH"`.
 2. **Codex models.** Run `codex debug models` and confirm that `gpt-6-astra` is listed. If it isn't, change `cli_models.codex.standard` and `.advanced` in `config.yaml` **before** step 2, because the policy is copied into the run when the run is created.
 3. **Certification.** Run `ecc doctor` and confirm that `cert-latest.json` shows Claude and Codex certified and unexpired. If it has expired, run `launchctl kickstart -k "gui/$(id -u)/local.openclaw-ecc-orchestrator.recertify"` and wait for the notification.
 4. **Inbox processor.** Confirm it is running: `launchctl print "gui/$(id -u)/local.openclaw-ecc-orchestrator.inbox-processor" | grep state`.
@@ -39,8 +39,8 @@ Both run on subscriptions. `runner_costs` in the policy only steers the split.
 
 ```sh
 cd ~/Documents/GitHub/my-research-mcp-v2
-ecc create-run --run-id rmcp-m0 --plan .orchestration/plan-m0.json
-ecc status --run-id rmcp-m0
+ecc create-run --run-id rmcp-m0b --plan .orchestration/plan-m0.json
+ecc status --run-id rmcp-m0b
 ```
 
 `create-run` shows the plan and asks you to type `yes`. Afterward only M0-01 is `ready`.
@@ -62,17 +62,17 @@ Waves follow the dependencies:
 
 Scopes don't overlap, so the units in one wave can be dispatched from separate terminals.
 
-1. **Dispatch.** Run `ecc dispatch --run-id rmcp-m0 --unit M0-01` and confirm the plan. When the runner finishes, the orchestrator runs the unit's acceptance commands (its tests, conformance for adapters, and `tools/ci.sh --python-only`) and the `unit-tests` check. The unit then becomes `reviewing` with a `verified_head`, or `failed` with a reason. A failed unit escalates one tier on retry, up to 3 attempts.
-2. **Review by the other family.** The reviewer reads `git diff main...ecc/rmcp-m0/<unit>` read-only, against the unit's LLD section, its scope and its test IDs (TEST-PLAN Appendix A). Then record the verdict:
+1. **Dispatch.** Run `ecc dispatch --run-id rmcp-m0b --unit M0-01` and confirm the plan. When the runner finishes, the orchestrator runs the unit's acceptance commands (its tests, conformance for adapters, and `tools/ci.sh --python-only`) and the `unit-tests` check. The unit then becomes `reviewing` with a `verified_head`, or `failed` with a reason. A failed unit escalates one tier on retry, up to 3 attempts.
+2. **Review by the other family.** The reviewer reads `git diff main...ecc/rmcp-m0b/<unit>` read-only, against the unit's LLD section, its scope and its test IDs (TEST-PLAN Appendix A). Then record the verdict:
 
    ```sh
-   ecc review --run-id rmcp-m0 --unit M0-01 --reviewer codex-review --runner codex --model gpt-6-astra \
+   ecc review --run-id rmcp-m0b --unit M0-01 --reviewer codex-review --runner codex --model gpt-6-astra \
      --tier 2 --verdict approved --head <verified_head> --session agent:main:main
    ```
 
    For units Codex wrote, use `--runner claude --model opus`. `--tier` must be at least the unit's review tier from the table above.
 3. **Approve the merge.** Run `decide list`, then `decide approve <request_id>` and type `yes`.
-4. **Merge.** Run `ecc merge --run-id rmcp-m0 --unit M0-01`, then `ecc cleanup --run-id rmcp-m0 --unit M0-01`.
+4. **Merge.** Run `ecc merge --run-id rmcp-m0b --unit M0-01`, then `ecc cleanup --run-id rmcp-m0b --unit M0-01`.
 
 ## 4. Exit (milestone M0)
 
@@ -95,7 +95,7 @@ For each unit, record:
 - time from dispatch to merge
 - any manual intervention
 
-`ecc status --run-id rmcp-m0 --json` and `ecc events tail --run-id rmcp-m0` have most of these.
+`ecc status --run-id rmcp-m0b --json` and `ecc events tail --run-id rmcp-m0b` have most of these.
 
 ## Safety
 

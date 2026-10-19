@@ -1,8 +1,8 @@
 """Builds .orchestration/plan-m0.json from LLD section 12.3 and TEST-PLAN Appendix A."""
 import json, re, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-lld = (ROOT / "docs/design/LLD-v1.md").read_text()
-plan = (ROOT / "docs/test-plan/TEST-PLAN-v1.md").read_text()
+lld = (ROOT / "docs/design/LLD-v2.md").read_text()
+plan = (ROOT / "docs/test-plan/TEST-PLAN-v2.md").read_text()
 
 sec = lld.split("### 12.3", 1)[1].split("### 12.4", 1)[0]
 rows = [l for l in sec.splitlines() if l.startswith("| M0-")]
@@ -43,9 +43,9 @@ for r in rows:
         cmds.append(f"uv run pytest tests/sources/test_conformance.py -k {m.group(1)} -q")
     cmds.append("tools/ci.sh --python-only")
     tier = {"low": 0, "medium": 1, "high": 2}[risk]
-    desc = (f"Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v1.md section 12.3 "
+    desc = (f"Read AGENTS.md first. Build exactly this work unit as defined in docs/design/LLD-v2.md section 12.3 "
             f"(unit {uid}), following the LLD sections it implements ({impl}) and the names the LLD owns. "
-            f"Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v1.md Appendix A): {at}; "
+            f"Write the acceptance tests the test plan assigns to this unit (docs/test-plan/TEST-PLAN-v2.md Appendix A): {at}; "
             "put each test id first in the test docstring per test plan section 1.3. Keep tools/ci.sh --python-only green; gates run commands "
             "directly without a shell, so tools/ci.sh must stay executable with a #!/usr/bin/env bash line. Do not add __init__.py files under tests/ and do not edit pyproject.toml, uv.lock or any package __init__.py (M0-01 owns them). Do not touch the v1 "
             "repository (my-research-mcp-server) or ~/arxiv-papers, never read real credentials or the Keychain, and use fakes "
