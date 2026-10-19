@@ -1,0 +1,22 @@
+{
+  "schema_version": "2.0",
+  "merge_approval": "agents",
+  "handoff_repair_turns": 1,
+  "preflight": "required",
+  "share_cap": 0.4,
+  "roles": {
+    "architect": {
+      "contract_paths": [
+        "src/research_mcp/core/specs.py",
+        "src/research_mcp/core/models.py",
+        "src/research_mcp/sources/base.py",
+        "src/research_mcp/platform/migrations/**"
+      ]
+    },
+    "designer": {
+      "when_paths": [
+        "src/research_mcp/ui/**"
+      ]
+    }
+  }
+}

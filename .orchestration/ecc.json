@@ -9,5 +9,6 @@
     "commands": {
       "unit-tests": "uv run pytest -q"
     }
-  }
+  },
+  "catalog": "~/.local/state/openclaw-ecc-orchestrator/catalog-latest.json"
 }
