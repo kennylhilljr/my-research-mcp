@@ -62,7 +62,11 @@ def _resolver(
     if parts.hostname not in hosts:
         raise IdentifierError("Unexpected identifier host")
     # Resolver paths are percent-encoded; the identifier is the decoded form.
-    path = unquote(parts.path)
+    # Strict decoding keeps distinct invalid byte escapes from collapsing to U+FFFD.
+    try:
+        path = unquote(parts.path, errors="strict")
+    except UnicodeDecodeError as exc:
+        raise IdentifierError("Invalid percent-encoding in identifier URL") from exc
     path = path.lstrip("/") if keep_trailing_slash else path.strip("/")
     if path_prefix:
         path = re.sub(path_prefix, "", path, flags=re.I)

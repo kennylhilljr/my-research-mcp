@@ -42,6 +42,9 @@ class IdentifierTests(unittest.TestCase):
             "",
             "https://doi.org/10.1234/a%20b",
             "https://doi.org/10.1234/a%0Ab",
+            # Invalid UTF-8 escapes must not collapse to one replacement character.
+            "https://doi.org/10.1234/a%FF",
+            "https://doi.org/10.1234/a%FE",
             "10.123/x",
             "10.1234567890/x",
             "10.1234/",
