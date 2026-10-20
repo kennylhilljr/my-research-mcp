@@ -4,8 +4,8 @@ The check runs in a fresh interpreter. Third-party dependencies are imported fir
 pydantic is primed, so their own import-time work is not recorded. Then os.environ is
 replaced by a recording mapping (audit hooks do not see environment reads), an audit hook
 is installed and the package and every submodule are imported. An event counts against
-the package when the first frame outside the standard library is a file of the package,
-so work done by an already-imported dependency on its own behalf is not counted.
+the package when any frame on the stack is a file of the package, so work a dependency
+does because package code called it at import time is counted too.
 """
 
 from __future__ import annotations
@@ -31,7 +31,6 @@ import logging
 import os
 import pkgutil
 import sys
-import sysconfig
 from collections.abc import MutableMapping
 
 target, third_party = sys.argv[1], json.loads(sys.argv[2])
@@ -48,30 +47,21 @@ class _Prime(pydantic.BaseModel):
 _Prime(value=1).model_dump_json()
 
 target_dir = os.path.realpath(os.path.dirname(importlib.util.find_spec(target).origin)) + os.sep
-paths = sysconfig.get_paths()
-stdlib = tuple(os.path.realpath(paths[k]) + os.sep for k in ("stdlib", "platstdlib"))
-site = tuple(os.path.realpath(paths[k]) + os.sep for k in ("purelib", "platlib"))
 module_suffixes = tuple(importlib.machinery.all_suffixes()) + (".pyc", ".pth")
 events = []
 
 
 @functools.lru_cache(maxsize=None)
-def _kind_of_file(filename):
-    if filename.startswith("<frozen"):
-        return "stdlib"
-    path = os.path.realpath(filename)
-    if path.startswith(target_dir):
-        return "target"
-    if path.startswith(stdlib) and not path.startswith(site):
-        return "stdlib"
-    return "other"
+def _in_target(filename):
+    if filename.startswith("<"):
+        return False
+    return os.path.realpath(filename).startswith(target_dir)
 
 
 def _attributed(frame):
     while frame is not None:
-        kind = _kind_of_file(frame.f_code.co_filename)
-        if kind != "stdlib":
-            return kind == "target"
+        if _in_target(frame.f_code.co_filename):
+            return True
         frame = frame.f_back
     return False
 
@@ -188,6 +178,19 @@ os.mkdir(os.path.join(HERE, "made"))
 logging.getLogger("probe_dirty").addHandler(logging.NullHandler())
 """
 
+# The package does no I/O itself but has an already-imported dependency read the
+# environment at import time, so the reads happen in pydantic_settings frames.
+DEPENDENCY_DIRTY_PACKAGE = """
+from pydantic_settings import BaseSettings
+
+
+class ProbeSettings(BaseSettings):
+    home: str = ""
+
+
+ProbeSettings()
+"""
+
 
 def _third_party_modules() -> list[str]:
     """Top-level modules of every base (non-extra) dependency of research-mcp."""
@@ -242,6 +245,20 @@ def test_probe_detects_import_side_effects(tmp_path: Path) -> None:
 
     kinds = {event[0] for event in result["events"]}  # type: ignore[index]
     assert kinds == {"env", "open", "socket", "subprocess", "mkdir", "logging"}
+
+
+def test_probe_detects_work_done_through_a_dependency(tmp_path: Path) -> None:
+    """AT-PLAT-03: work a dependency does when the package calls it at import is counted."""
+    package = tmp_path / "probe_dependency_dirty"
+    package.mkdir()
+    (package / "__init__.py").write_text(
+        textwrap.dedent(DEPENDENCY_DIRTY_PACKAGE), encoding="utf-8"
+    )
+
+    result = _probe("probe_dependency_dirty", pythonpath=tmp_path)
+
+    kinds = {event[0] for event in result["events"]}  # type: ignore[index]
+    assert "env" in kinds
 
 
 def test_importing_research_mcp_does_no_work() -> None:

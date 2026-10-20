@@ -1,19 +1,57 @@
 name: ci
 
+# FR-PLAT-53: tools/ci.sh on macOS and Linux with Python 3.12 and 3.13, actions pinned
+# by commit SHA, read-only token, a secret scan and a weekly dependency audit.
+
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   ci:
-    runs-on: macos-latest
+    if: github.event_name != 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python: ["3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          python-version: ${{ matrix.python }}
       - name: Install Python and dependencies from the lock file
         run: uv sync --frozen
       - name: Full CI (lint, types, tests with coverage gate, build, smoke test)
         run: tools/ci.sh
+
+  secret-scan:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-audit:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+      - name: Export the locked dependencies, extras included
+        run: >-
+          uv export --frozen --all-extras --no-emit-project --no-hashes
+          --format requirements-txt --output-file requirements-audit.txt
+      - name: Audit them against known vulnerabilities
+        run: uvx pip-audit --requirement requirements-audit.txt
