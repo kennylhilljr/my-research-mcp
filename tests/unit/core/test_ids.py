@@ -96,6 +96,25 @@ class IdentifierTests(unittest.TestCase):
                 self.assertEqual(normalizer(value), expected)
                 with self.assertRaises(ids.IdentifierError):
                     normalizer("invalid value")
+        # A handle suffix may contain slashes, and a trailing slash is part of it.
+        for value in [
+            "20.500.12345/abc/def",
+            "hdl:20.500.12345/abc/def",
+            "https://hdl.handle.net/20.500.12345/abc/def",
+        ]:
+            with self.subTest(value=value):
+                self.assertEqual(ids.normalize_handle(value), "20.500.12345/abc/def")
+        self.assertEqual(
+            ids.normalize_handle("https://hdl.handle.net/20.500.12345/abc/"),
+            "20.500.12345/abc/",
+        )
+        self.assertNotEqual(
+            ids.normalize_handle("https://hdl.handle.net/20.500.12345/abc/"),
+            ids.normalize_handle("https://hdl.handle.net/20.500.12345/abc"),
+        )
+        for value in ["123/", "123/a" + chr(0xA0) + "b", "https://hdl.handle.net/123/a%0Ab"]:
+            with self.subTest(value=value), self.assertRaises(ids.IdentifierError):
+                ids.normalize_handle(value)
 
     def test_url(self):
         """AT-SRCH-13: URL cleanup preserves path case and meaningful query data."""
@@ -153,6 +172,8 @@ class IdentifierTests(unittest.TestCase):
             ("RFC822", "rfc", "822"),
             ("123.45/AbC", "handle", "123.45/AbC"),
             ("1234.56789/AbC", "handle", "1234.56789/AbC"),
+            ("https://hdl.handle.net/20.500.12345/abc/def", "handle", "20.500.12345/abc/def"),
+            ("https://hdl.handle.net/20.500.12345/abc/", "handle", "20.500.12345/abc/"),
             ("github:Owner/Repo", "github", "owner/repo"),
             ("https://github.com/Owner/Repo.git", "github", "owner/repo"),
             ("https://github.com/Owner/Repo.git.git", "github", "owner/repo.git"),
@@ -214,6 +235,7 @@ class IdentifierTests(unittest.TestCase):
             (ids.normalize_nct, "NCT000" + n, True),
             (ids.normalize_rfc, n, True),
             (ids.normalize_handle, "123/Ab" + n, False),
+            (ids.normalize_handle, "https://hdl.handle.net/123/Ab/" + n + "/", False),
             (
                 ids.normalize_dspace_uuid,
                 "abcdef01-2345-6789-abcd-0123456789ab",

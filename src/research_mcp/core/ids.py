@@ -86,10 +86,14 @@ def normalize_doi(s: str) -> str:
         if value.count(closing) <= value.count(brackets[closing]):
             break
         value = value[:-1].rstrip(".,;:!?\"'")
+    _reject_unicode_space(value)
+    return _match(value, r"10\.\d{4,9}/\S+")
+
+
+def _reject_unicode_space(value: str) -> None:
     # ASCII matching alone would let Unicode whitespace such as U+00A0 through.
     if any(c.isspace() or unicodedata.category(c).startswith("C") for c in value):
         raise IdentifierError("Invalid identifier form")
-    return _match(value, r"10\.\d{4,9}/\S+")
 
 
 def normalize_arxiv(s: str) -> tuple[str, int | None]:
@@ -166,8 +170,11 @@ def normalize_rfc(s: str) -> str:
 
 
 def normalize_handle(s: str) -> str:
-    value = _resolver(_prefix(s, "handle|hdl"), {"hdl.handle.net"})
-    return _match(value, r"\d+(?:\.\d+)*/[^\s/]+")
+    # The whole resolver path is the handle: suffixes may hold slashes, and a
+    # trailing slash is part of the handle, so it is kept as in normalize_doi.
+    value = _resolver(_prefix(s, "handle|hdl"), {"hdl.handle.net"}, keep_trailing_slash=True)
+    _reject_unicode_space(value)
+    return _match(value, r"\d+(?:\.\d+)*/\S+")
 
 
 def normalize_dspace_uuid(s: str) -> str:
