@@ -33,6 +33,9 @@
         "codex",
         "claude"
       ]
+    },
+    "delivery_lead": {
+      "class": "standard"
     }
   },
   "milestone": {
