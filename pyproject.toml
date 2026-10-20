@@ -1,0 +1,86 @@
+[project]
+name = "research-mcp"
+version = "3.0.0"
+description = "Local research MCP server: federated scholarly search, a reviewed paper cache and an archive."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.27,<2",
+    "httpx[http2]",
+    "anyio",
+    "pydantic>=2",
+    "pydantic-settings",
+    "aiosqlite",
+    "uvicorn",
+    "starlette",
+    "jinja2",
+    "selectolax",
+    "defusedxml",
+    "python-ulid",
+    "psutil",
+    "tomli-w",
+]
+
+[project.optional-dependencies]
+pdf = ["pymupdf"]
+embeddings = ["fastembed", "numpy"]
+macos = ["pyobjc-framework-Cocoa; sys_platform == 'darwin'"]
+
+[project.scripts]
+research-mcp = "research_mcp.cli:main"
+research-mcpd = "research_mcp.daemon:main"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "respx",
+    "hypothesis",
+    "ruff",
+    "mypy",
+    "types-defusedxml",
+    "types-psutil",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# The wheel ships every file under the package, which covers the package data in LLD 12.1:
+# platform/migrations/**/*.sql, ui/templates/*.html, ui/static/* and
+# packaging/launchd/*.plist.template.
+[tool.hatch.build.targets.wheel]
+packages = ["src/research_mcp"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -m 'not live'"
+asyncio_mode = "auto"
+markers = ["live: real upstream calls"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["tools/gen_test_plan.py", "tools/gen_m0_plan.py"]
+
+# Ruff also formats Python code blocks in Markdown; the design docs hold sketches, not code.
+[tool.ruff.format]
+exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP", "SIM", "ASYNC", "BLE", "S", "C90"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S108"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["fitz.*", "fastembed.*", "objc.*", "Foundation.*", "selectolax.*"]
+ignore_missing_imports = true
