@@ -1,5 +1,6 @@
 """Validated configuration. Loading and directory creation are explicit startup work."""
 
+import os
 import re
 from datetime import date
 from ipaddress import ip_address
@@ -64,13 +65,15 @@ class PathSettings(Section):
         value = value.expanduser()
         if not value.is_absolute():
             raise ValueError("directory paths must be absolute")
-        return value
+        return Path(os.path.normpath(value))
 
     @field_validator("state_dir", "data_dir")
     @classmethod
     def durable_location(cls, value: Path) -> Path:
         # macOS and cleaners may purge ~/Library/Caches; durable data never lives there.
-        if value.is_relative_to(Path.home() / "Library/Caches"):
+        # Check the resolved path too, so symlinks cannot point durable data into it.
+        caches = Path.home() / "Library/Caches"
+        if value.is_relative_to(caches) or value.resolve().is_relative_to(caches.resolve()):
             raise ValueError("state and data directories must not be under ~/Library/Caches")
         return value
 
@@ -233,6 +236,23 @@ class Settings(BaseSettings):
     backup: BackupSettings = Field(default_factory=BackupSettings)
     sources: dict[str, SourceSettings] = Field(default_factory=dict)
     credentials: dict[str, CredentialSettings] = Field(default_factory=dict)
+
+    @field_validator("credentials", mode="before")
+    @classmethod
+    def canonical_credential_names(cls, value: object) -> object:
+        # Environment keys arrive lowercased while credential names are upper case.
+        # Sources are merged lowest priority first, so later entries win per field.
+        if not isinstance(value, dict):
+            return value
+        merged: dict[str, object] = {}
+        for name, entry in value.items():
+            key = str(name).upper()
+            previous = merged.get(key)
+            if isinstance(previous, dict) and isinstance(entry, dict):
+                merged[key] = {**previous, **entry}
+            else:
+                merged[key] = entry
+        return merged
 
     @classmethod
     def settings_customise_sources(

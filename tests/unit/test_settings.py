@@ -174,6 +174,51 @@ def test_durable_paths_outside_caches(key: str, monkeypatch: pytest.MonkeyPatch)
         Settings()
 
 
+@pytest.mark.parametrize("key", ["PATHS__STATE_DIR", "PATHS__DATA_DIR"])
+@pytest.mark.parametrize(
+    "value",
+    ["~/Library/Application Support/../Caches/research-mcp", "~/x/../Library/Caches/data"],
+)
+def test_dotdot_paths_into_caches(key: str, value: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """AT-PLAT-09: Parent segments cannot route durable paths into ~/Library/Caches."""
+    monkeypatch.setenv("RESEARCH_MCP_" + key, value)
+    with pytest.raises(ValidationError, match="Library/Caches"):
+        Settings()
+
+
+def test_symlinked_path_into_caches(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """AT-PLAT-09: A symlink cannot point durable data into ~/Library/Caches."""
+    (tmp_path / "Library/Caches").mkdir(parents=True)
+    (tmp_path / "linked").symlink_to(tmp_path / "Library/Caches")
+    monkeypatch.setenv("RESEARCH_MCP_PATHS__STATE_DIR", "~/linked/state")
+    with pytest.raises(ValidationError, match="Library/Caches"):
+        Settings()
+
+
+def test_paths_are_normalized(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """AT-PLAT-09: Accepted paths are stored without parent segments."""
+    monkeypatch.setenv("RESEARCH_MCP_PATHS__DATA_DIR", "~/a/../custom/./data")
+    assert Settings().paths.data_dir == tmp_path / "custom/data"
+
+
+def test_credential_environment_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """AT-PLAT-08: Environment credential overrides replace the canonical TOML entry."""
+    config = tmp_path / ".config/research-mcp/config.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        '[credentials.CORE_API_KEY]\nrotate_by = "2027-01-01"\n'
+        '[credentials.S2_API_KEY]\nrotate_by = "2027-02-01"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("RESEARCH_MCP_CREDENTIALS__CORE_API_KEY__ROTATE_BY", "2028-06-30")
+    monkeypatch.setenv("RESEARCH_MCP_CREDENTIALS__OPENALEX_KEY__ROTATE_BY", "2029-01-01")
+    credentials = Settings().credentials
+    assert set(credentials) == {"CORE_API_KEY", "S2_API_KEY", "OPENALEX_KEY"}
+    assert str(credentials["CORE_API_KEY"].rotate_by) == "2028-06-30"
+    assert str(credentials["S2_API_KEY"].rotate_by) == "2027-02-01"
+    assert str(credentials["OPENALEX_KEY"].rotate_by) == "2029-01-01"
+
+
 def test_existing_parent_permissions(tmp_path: Path) -> None:
     """AT-PLAT-09: Startup preserves permissions on preexisting shared parents."""
     library = tmp_path / "Library"
