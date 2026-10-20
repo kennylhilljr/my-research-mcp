@@ -66,6 +66,14 @@ class PathSettings(Section):
             raise ValueError("directory paths must be absolute")
         return value
 
+    @field_validator("state_dir", "data_dir")
+    @classmethod
+    def durable_location(cls, value: Path) -> Path:
+        # macOS and cleaners may purge ~/Library/Caches; durable data never lives there.
+        if value.is_relative_to(Path.home() / "Library/Caches"):
+            raise ValueError("state and data directories must not be under ~/Library/Caches")
+        return value
+
     def create_directories(self) -> None:
         """Create private runtime directories at daemon start, not during loading."""
         directories = (

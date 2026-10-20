@@ -166,6 +166,14 @@ def test_path_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert not settings.paths.data_dir.exists()
 
 
+@pytest.mark.parametrize("key", ["PATHS__STATE_DIR", "PATHS__DATA_DIR"])
+def test_durable_paths_outside_caches(key: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """AT-PLAT-09: State and cache data cannot be configured under ~/Library/Caches."""
+    monkeypatch.setenv("RESEARCH_MCP_" + key, "~/Library/Caches/research-mcp/data")
+    with pytest.raises(ValidationError, match="Library/Caches"):
+        Settings()
+
+
 def test_existing_parent_permissions(tmp_path: Path) -> None:
     """AT-PLAT-09: Startup preserves permissions on preexisting shared parents."""
     library = tmp_path / "Library"
