@@ -35,6 +35,9 @@ def _match(s: str, pattern: str) -> str:
 
 def _url(s: str) -> SplitResult:
     try:
+        # urlsplit silently removes some controls, which could change identity.
+        if any(ord(char) < 32 or ord(char) == 127 for char in s):
+            raise ValueError
         parts = urlsplit(s)
         if (
             parts.scheme.lower() not in {"http", "https"}
@@ -64,10 +67,14 @@ def _resolver(s: str, hosts: set[str], path_prefix: str = "") -> str:
 
 def normalize_doi(s: str) -> str:
     value = _resolver(_prefix(s, "doi"), {"doi.org", "dx.doi.org"}).lower()
-    value = value.rstrip(".,;:")
-    # Preserve balanced parentheses that are part of a DOI suffix.
-    while value.endswith(")") and value.count(")") > value.count("("):
-        value = value[:-1].rstrip(".,;:")
+    value = value.rstrip(".,;:!?\"'")
+    # Preserve balanced brackets that are part of a DOI suffix.
+    brackets = {")": "(", "]": "[", "}": "{"}
+    while value and value[-1] in brackets:
+        closing = value[-1]
+        if value.count(closing) <= value.count(brackets[closing]):
+            break
+        value = value[:-1].rstrip(".,;:!?\"'")
     return _match(value, r"10\.\d{4,9}/\S+")
 
 

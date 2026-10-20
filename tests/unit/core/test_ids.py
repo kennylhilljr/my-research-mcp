@@ -17,10 +17,15 @@ class IdentifierTests(unittest.TestCase):
             " DOI:10.1145/ABC. ",
             "https://doi.org/10.1145/ABC",
             "http://dx.doi.org/10.1145/ABC,;",
+            "doi:10.1145/ABC!?",
+            '10.1145/ABC]."',
+            "10.1145/ABC})",
         ]:
             with self.subTest(value=value):
                 self.assertEqual(ids.normalize_doi(value), "10.1145/abc")
         self.assertEqual(ids.normalize_doi("10.1234/a(b)"), "10.1234/a(b)")
+        self.assertEqual(ids.normalize_doi("10.1234/a[b]"), "10.1234/a[b]")
+        self.assertEqual(ids.normalize_doi("10.1234/a{b}"), "10.1234/a{b}")
         self.assertEqual(ids.normalize_doi("10.1234/abc)."), "10.1234/abc")
         for value in [
             "",
@@ -93,6 +98,10 @@ class IdentifierTests(unittest.TestCase):
             "https://example.com:bad",
             "https://x/a b",
             "https://user:password@example.com/",
+            "https://exam\x00ple.com/",
+            "https://example.com/Pa\nper",
+            "https://example.com/Pa\tper",
+            "https://example.com/\x7f",
         ]:
             with self.assertRaises(ids.IdentifierError):
                 ids.normalize_url(value)
@@ -148,12 +157,18 @@ class IdentifierTests(unittest.TestCase):
             "2410.18291.pdf",
             "arxiv:2410.18291.pdf",
             "doi:bad",
+            "https://doi.org/10.1234/ab\ncd",
+            "https://github.com/Own\ter/Repo",
         ]:
             with self.assertRaises(ids.IdentifierError):
                 ids.parse_any(value)
 
-    @given(number=st.integers(10000, 99999), digest=st.integers(0, 2**160 - 1))
-    def test_properties(self, number, digest):
+    @given(
+        number=st.integers(10000, 99999),
+        digest=st.integers(0, 2**160 - 1),
+        version_number=st.integers(1, 1000),
+    )
+    def test_properties(self, number, digest, version_number):
         """AT-SRCH-15: Generated inputs are idempotent and whitespace/case stable."""
         n = str(number)
         cases = [
@@ -180,10 +195,13 @@ class IdentifierTests(unittest.TestCase):
             self.assertEqual(normalizer(" \t" + value + "\n"), expected)
             if case_insensitive:
                 self.assertEqual(normalizer(value.swapcase()), expected)
-        raw = "ARXIV:2410." + n + "v2"
-        canonical, version = ids.normalize_arxiv(raw)
-        self.assertEqual(ids.normalize_arxiv(canonical), (canonical, None))
-        self.assertEqual(ids.normalize_arxiv(" " + raw.swapcase() + " "), (canonical, version))
+        for base in ["2410." + n, "hep-th/99" + n, "math.AG/03" + n]:
+            raw = f"ARXIV:{base}v{version_number}"
+            canonical, version = ids.normalize_arxiv(raw)
+            self.assertEqual(version, version_number)
+            self.assertEqual(ids.normalize_arxiv(canonical), (canonical, None))
+            self.assertEqual(ids.normalize_arxiv(f"{canonical}v{version}"), (canonical, version))
+            self.assertEqual(ids.normalize_arxiv(" " + raw.swapcase() + " "), (canonical, version))
         self.assertEqual(
             ids.normalize_url("HTTPS://EXAMPLE.ORG/Case?x=" + n),
             "https://example.org/Case?x=" + n,
