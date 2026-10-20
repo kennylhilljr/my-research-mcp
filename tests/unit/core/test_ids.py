@@ -30,8 +30,18 @@ class IdentifierTests(unittest.TestCase):
         for value in ["10.1234/abc/", "https://doi.org/10.1234/abc/", "doi:10.1234/ABC/"]:
             with self.subTest(value=value):
                 self.assertEqual(ids.normalize_doi(value), "10.1234/abc/")
+        # Resolver paths are percent-encoded; the bare DOI is the decoded form.
+        for value in [
+            "10.1002/ABC(1)",
+            "https://doi.org/10.1002/ABC%281%29",
+            "https://doi.org/10.1002%2FABC(1)",
+        ]:
+            with self.subTest(value=value):
+                self.assertEqual(ids.normalize_doi(value), "10.1002/abc(1)")
         for value in [
             "",
+            "https://doi.org/10.1234/a%20b",
+            "https://doi.org/10.1234/a%0Ab",
             "10.123/x",
             "10.1234567890/x",
             "10.1234/",

@@ -3,7 +3,7 @@
 import re
 import unicodedata
 from dataclasses import dataclass
-from urllib.parse import SplitResult, unquote_plus, urlsplit, urlunsplit
+from urllib.parse import SplitResult, unquote, unquote_plus, urlsplit, urlunsplit
 
 
 class IdentifierError(ValueError):
@@ -61,7 +61,9 @@ def _resolver(
     parts = _url(s)
     if parts.hostname not in hosts:
         raise IdentifierError("Unexpected identifier host")
-    path = parts.path.lstrip("/") if keep_trailing_slash else parts.path.strip("/")
+    # Resolver paths are percent-encoded; the identifier is the decoded form.
+    path = unquote(parts.path)
+    path = path.lstrip("/") if keep_trailing_slash else path.strip("/")
     if path_prefix:
         path = re.sub(path_prefix, "", path, flags=re.I)
     return path
