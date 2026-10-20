@@ -27,12 +27,18 @@ class IdentifierTests(unittest.TestCase):
         self.assertEqual(ids.normalize_doi("10.1234/a[b]"), "10.1234/a[b]")
         self.assertEqual(ids.normalize_doi("10.1234/a{b}"), "10.1234/a{b}")
         self.assertEqual(ids.normalize_doi("10.1234/abc)."), "10.1234/abc")
+        for value in ["10.1234/abc/", "https://doi.org/10.1234/abc/", "doi:10.1234/ABC/"]:
+            with self.subTest(value=value):
+                self.assertEqual(ids.normalize_doi(value), "10.1234/abc/")
         for value in [
             "",
             "10.123/x",
             "10.1234567890/x",
             "10.1234/",
             "10.1234/a b",
+            "10.1234/alpha" + chr(0xA0) + "beta",
+            "10.1234/alpha" + chr(0x2003) + "beta",
+            "https://doi.org/10.1234/alpha" + chr(0xA0) + "beta",
             "https://example.org/10.1234/a",
         ]:
             with self.assertRaises(ids.IdentifierError):
@@ -92,6 +98,18 @@ class IdentifierTests(unittest.TestCase):
             "https://example.com:8443/A/",
         )
         self.assertEqual(ids.normalize_url("http://[::1]:80/A"), "http://[::1]/A")
+        self.assertEqual(
+            ids.normalize_url("https://example.org/Case?x=%FF"),
+            "https://example.org/Case?x=%FF",
+        )
+        self.assertNotEqual(
+            ids.normalize_url("https://example.org/Case?x=%FF"),
+            ids.normalize_url("https://example.org/Case?x=%FE"),
+        )
+        self.assertEqual(
+            ids.normalize_url("https://example.org/A?UTM_Medium=x&q=a+b&gclid=y"),
+            "https://example.org/A?q=a+b",
+        )
         for value in [
             "file:///tmp/x",
             "https://",

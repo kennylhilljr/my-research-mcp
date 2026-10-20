@@ -3,7 +3,7 @@
 import re
 import unicodedata
 from dataclasses import dataclass
-from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import SplitResult, unquote_plus, urlsplit, urlunsplit
 
 
 class IdentifierError(ValueError):
@@ -53,20 +53,25 @@ def _url(s: str) -> SplitResult:
         raise IdentifierError("Invalid HTTP URL") from exc
 
 
-def _resolver(s: str, hosts: set[str], path_prefix: str = "") -> str:
+def _resolver(
+    s: str, hosts: set[str], path_prefix: str = "", keep_trailing_slash: bool = False
+) -> str:
     if "://" not in s:
         return s
     parts = _url(s)
     if parts.hostname not in hosts:
         raise IdentifierError("Unexpected identifier host")
-    path = parts.path.strip("/")
+    path = parts.path.lstrip("/") if keep_trailing_slash else parts.path.strip("/")
     if path_prefix:
         path = re.sub(path_prefix, "", path, flags=re.I)
     return path
 
 
 def normalize_doi(s: str) -> str:
-    value = _resolver(_prefix(s, "doi"), {"doi.org", "dx.doi.org"}).lower()
+    # A trailing slash can belong to the DOI suffix, as in the bare form.
+    value = _resolver(
+        _prefix(s, "doi"), {"doi.org", "dx.doi.org"}, keep_trailing_slash=True
+    ).lower()
     value = value.rstrip(".,;:!?\"'")
     # Preserve balanced brackets that are part of a DOI suffix.
     brackets = {")": "(", "]": "[", "}": "{"}
@@ -75,6 +80,9 @@ def normalize_doi(s: str) -> str:
         if value.count(closing) <= value.count(brackets[closing]):
             break
         value = value[:-1].rstrip(".,;:!?\"'")
+    # ASCII matching alone would let Unicode whitespace such as U+00A0 through.
+    if any(c.isspace() or unicodedata.category(c).startswith("C") for c in value):
+        raise IdentifierError("Invalid identifier form")
     return _match(value, r"10\.\d{4,9}/\S+")
 
 
@@ -183,13 +191,14 @@ def normalize_url(s: str) -> str:
         ("https", 443),
     }:
         host += f":{parts.port}"
-    query = urlencode(
-        [
-            (k, v)
-            for k, v in parse_qsl(parts.query, keep_blank_values=True)
-            if not k.lower().startswith("utm_") and k.lower() not in {"fbclid", "gclid", "msclkid"}
-        ]
-    )
+    # Keep the raw query pairs: decoding and re-encoding would merge distinct
+    # non-UTF-8 octets into the same replacement character.
+    pairs = []
+    for pair in parts.query.split("&"):
+        key = unquote_plus(pair.partition("=")[0]).lower()
+        if pair and not key.startswith("utm_") and key not in {"fbclid", "gclid", "msclkid"}:
+            pairs.append(pair)
+    query = "&".join(pairs)
     return urlunsplit((scheme, host, parts.path or "/", query, ""))
 
 
