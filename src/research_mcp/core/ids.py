@@ -3,7 +3,7 @@
 import re
 import unicodedata
 from dataclasses import dataclass
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import SplitResult, parse_qsl, urlencode, urlsplit, urlunsplit
 
 
 class IdentifierError(ValueError):
@@ -33,7 +33,7 @@ def _match(s: str, pattern: str) -> str:
     return s
 
 
-def _url(s: str):
+def _url(s: str) -> SplitResult:
     try:
         parts = urlsplit(s)
         if (
@@ -72,9 +72,7 @@ def normalize_doi(s: str) -> str:
 
 
 def normalize_arxiv(s: str) -> tuple[str, int | None]:
-    value = _resolver(
-        _prefix(s, "arxiv"), {"arxiv.org", "www.arxiv.org"}, r"^(abs|pdf)/"
-    )
+    value = _resolver(_prefix(s, "arxiv"), {"arxiv.org", "www.arxiv.org"}, r"^(abs|pdf)/")
     value = re.sub(r"\.pdf$", "", value, flags=re.I)
     version_match = re.search(r"v([1-9][0-9]*)$", value, flags=re.I)
     version = int(version_match[1]) if version_match else None
@@ -122,9 +120,7 @@ def normalize_s2(s: str) -> str:
 
 
 def normalize_core(s: str) -> str:
-    return _match(
-        _resolver(_prefix(s, "core"), {"core.ac.uk"}, r"^(?:works|outputs)/"), r"\d+"
-    )
+    return _match(_resolver(_prefix(s, "core"), {"core.ac.uk"}, r"^(?:works|outputs)/"), r"\d+")
 
 
 def normalize_nct(s: str) -> str:
@@ -169,7 +165,10 @@ def normalize_github(s: str) -> str:
 def normalize_url(s: str) -> str:
     parts = _url(_prefix(s, "url"))
     scheme = parts.scheme.lower()
-    host = parts.hostname.lower()
+    host = parts.hostname
+    if host is None:
+        raise IdentifierError("Missing URL host")
+    host = host.lower()
     if ":" in host:
         host = f"[{host}]"
     if parts.port is not None and (scheme, parts.port) not in {
@@ -181,8 +180,7 @@ def normalize_url(s: str) -> str:
         [
             (k, v)
             for k, v in parse_qsl(parts.query, keep_blank_values=True)
-            if not k.lower().startswith("utm_")
-            and k.lower() not in {"fbclid", "gclid", "msclkid"}
+            if not k.lower().startswith("utm_") and k.lower() not in {"fbclid", "gclid", "msclkid"}
         ]
     )
     return urlunsplit((scheme, host, parts.path or "/", query, ""))
@@ -241,6 +239,8 @@ def parse_any(s: str) -> Identifier:
             "hdl.handle.net": "handle",
             "github.com": "github",
         }
+        if host is None:
+            raise IdentifierError("Missing URL host")
         scheme = hosts.get(host, hosts.get(host.removeprefix("www."), "url"))
         if scheme == "arxiv":
             ident, version = normalize_arxiv(value)
@@ -248,7 +248,7 @@ def parse_any(s: str) -> Identifier:
         return Identifier(scheme, _NORMALIZERS[scheme](value))
     for scheme, pattern in (
         ("doi", r"10\."),
-        ("arxiv", r"(?:\d{4}\.|[a-z-]+(?:\.[A-Z]{2})?/\d{7})"),
+        ("arxiv", r"(?:\d{4}\.\d{4,5}(?:v[1-9]\d*)?$|[a-z-]+(?:\.[A-Z]{2})?/\d{7})"),
         ("pmcid", r"PMC\d"),
         ("openalex", r"W\d"),
         ("nct", r"NCT\d"),
@@ -267,12 +267,12 @@ def parse_any(s: str) -> Identifier:
 
 
 # A small, fixed English stop list keeps title matching deterministic.
-_STOP_WORDS = frozenset("a an the and or of in on to for with by at from".split())
+_STOP_WORDS = frozenset(
+    ["a", "an", "the", "and", "or", "of", "in", "on", "to", "for", "with", "by", "at", "from"]
+)
 
 
 def title_key(title: str) -> str:
     value = unicodedata.normalize("NFKC", title).casefold()
-    value = "".join(
-        " " if unicodedata.category(c).startswith("P") else c for c in value
-    )
+    value = "".join(" " if unicodedata.category(c).startswith("P") else c for c in value)
     return " ".join(word for word in value.split() if word not in _STOP_WORDS)

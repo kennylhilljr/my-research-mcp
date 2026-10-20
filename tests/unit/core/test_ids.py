@@ -1,8 +1,10 @@
 """Offline acceptance tests for identifier normalization."""
 
-import random
 import unittest
 from dataclasses import FrozenInstanceError
+
+from hypothesis import given
+from hypothesis import strategies as st
 
 from research_mcp.core import ids
 
@@ -42,9 +44,7 @@ class IdentifierTests(unittest.TestCase):
             self.assertEqual(ids.normalize_arxiv(value), ("2410.18291", 1))
         self.assertEqual(ids.normalize_arxiv("2410.18291"), ("2410.18291", None))
         self.assertEqual(ids.normalize_arxiv("HEP-TH/9901001v2"), ("hep-th/9901001", 2))
-        self.assertEqual(
-            ids.normalize_arxiv("math.ag/0301234"), ("math.AG/0301234", None)
-        )
+        self.assertEqual(ids.normalize_arxiv("math.ag/0301234"), ("math.AG/0301234", None))
         for value in ["2410.123", "2410.123456", "2410.18291v0", "hep-th/123", "x"]:
             with self.assertRaises(ids.IdentifierError):
                 ids.normalize_arxiv(value)
@@ -81,9 +81,7 @@ class IdentifierTests(unittest.TestCase):
             ),
             "https://example.com/Case/Path?a=1&a=2&empty=",
         )
-        self.assertEqual(
-            ids.normalize_url("HTTP://Example.COM:80"), "http://example.com/"
-        )
+        self.assertEqual(ids.normalize_url("HTTP://Example.COM:80"), "http://example.com/")
         self.assertEqual(
             ids.normalize_url("https://example.com:8443/A/"),
             "https://example.com:8443/A/",
@@ -114,6 +112,7 @@ class IdentifierTests(unittest.TestCase):
             ("NCT01234567", "nct", "NCT01234567"),
             ("RFC822", "rfc", "822"),
             ("123.45/AbC", "handle", "123.45/AbC"),
+            ("1234.56789/AbC", "handle", "1234.56789/AbC"),
             ("github:Owner/Repo", "github", "owner/repo"),
             ("https://github.com/Owner/Repo.git", "github", "owner/repo"),
             ("https://pubmed.ncbi.nlm.nih.gov/123/", "pmid", "123"),
@@ -153,51 +152,46 @@ class IdentifierTests(unittest.TestCase):
             with self.assertRaises(ids.IdentifierError):
                 ids.parse_any(value)
 
-    def test_properties(self):
+    @given(number=st.integers(10000, 99999), digest=st.integers(0, 2**160 - 1))
+    def test_properties(self, number, digest):
         """AT-SRCH-15: Generated inputs are idempotent and whitespace/case stable."""
-        rng = random.Random(42)
-        for _ in range(100):
-            n = str(rng.randrange(10000, 99999))
-            cases = [
-                (ids.normalize_doi, "10.1234/a" + n, True),
-                (ids.normalize_pmid, n, True),
-                (ids.normalize_pmcid, "PMC" + n, True),
-                (ids.normalize_openalex, "W" + n, True),
-                (ids.normalize_s2, f"{rng.getrandbits(160):040x}", True),
-                (ids.normalize_core, n, True),
-                (ids.normalize_nct, "NCT000" + n, True),
-                (ids.normalize_rfc, n, True),
-                (ids.normalize_handle, "123/Ab" + n, False),
-                (
-                    ids.normalize_dspace_uuid,
-                    "abcdef01-2345-6789-abcd-0123456789ab",
-                    True,
-                ),
-                (ids.normalize_github, "Owner/Repo" + n, True),
-                (ids.normalize_url, "https://example.org/Case?x=" + n, False),
-            ]
-            for normalizer, value, case_insensitive in cases:
-                expected = normalizer(value)
-                self.assertEqual(normalizer(expected), expected)
-                self.assertEqual(normalizer(" \t" + value + "\n"), expected)
-                if case_insensitive:
-                    self.assertEqual(normalizer(value.swapcase()), expected)
-            raw = "ARXIV:2410." + n + "v2"
-            canonical, version = ids.normalize_arxiv(raw)
-            self.assertEqual(ids.normalize_arxiv(canonical), (canonical, None))
-            self.assertEqual(
-                ids.normalize_arxiv(" " + raw.swapcase() + " "), (canonical, version)
-            )
-            self.assertEqual(
-                ids.normalize_url("HTTPS://EXAMPLE.ORG/Case?x=" + n),
-                "https://example.org/Case?x=" + n,
-            )
+        n = str(number)
+        cases = [
+            (ids.normalize_doi, "10.1234/a" + n, True),
+            (ids.normalize_pmid, n, True),
+            (ids.normalize_pmcid, "PMC" + n, True),
+            (ids.normalize_openalex, "W" + n, True),
+            (ids.normalize_s2, f"{digest:040x}", True),
+            (ids.normalize_core, n, True),
+            (ids.normalize_nct, "NCT000" + n, True),
+            (ids.normalize_rfc, n, True),
+            (ids.normalize_handle, "123/Ab" + n, False),
+            (
+                ids.normalize_dspace_uuid,
+                "abcdef01-2345-6789-abcd-0123456789ab",
+                True,
+            ),
+            (ids.normalize_github, "Owner/Repo" + n, True),
+            (ids.normalize_url, "https://example.org/Case?x=" + n, False),
+        ]
+        for normalizer, value, case_insensitive in cases:
+            expected = normalizer(value)
+            self.assertEqual(normalizer(expected), expected)
+            self.assertEqual(normalizer(" \t" + value + "\n"), expected)
+            if case_insensitive:
+                self.assertEqual(normalizer(value.swapcase()), expected)
+        raw = "ARXIV:2410." + n + "v2"
+        canonical, version = ids.normalize_arxiv(raw)
+        self.assertEqual(ids.normalize_arxiv(canonical), (canonical, None))
+        self.assertEqual(ids.normalize_arxiv(" " + raw.swapcase() + " "), (canonical, version))
+        self.assertEqual(
+            ids.normalize_url("HTTPS://EXAMPLE.ORG/Case?x=" + n),
+            "https://example.org/Case?x=" + n,
+        )
 
     def test_title_key(self):
         """AT-SRCH-16: Titles use NFKC, casefold, punctuation and fixed stop words."""
-        self.assertEqual(
-            ids.title_key("The Ａrt of STRAẞE: A Study!"), "art strasse study"
-        )
+        self.assertEqual(ids.title_key("The Ａrt of STRAẞE: A Study!"), "art strasse study")
         self.assertEqual(
             ids.title_key("  Models,\tand methods\nfor science."),
             "models methods science",
