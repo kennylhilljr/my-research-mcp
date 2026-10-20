@@ -18,8 +18,9 @@ ClockTime = Annotated[str, Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")]
 
 
 class Section(BaseModel):
+    # Schema construction can read plugin settings; defer it until startup.
     model_config = ConfigDict(
-        extra="forbid", validate_default=True, hide_input_in_errors=True
+        extra="forbid", validate_default=True, hide_input_in_errors=True, defer_build=True
     )
 
 
@@ -44,8 +45,7 @@ class ServerSettings(Section):
     def reference_only(cls, value: str) -> str:
         prefixes = ("keychain:research-mcp/", "env:")
         if not any(
-            value.startswith(prefix) and value[len(prefix) :].strip()
-            for prefix in prefixes
+            value.startswith(prefix) and value[len(prefix) :].strip() for prefix in prefixes
         ):
             raise ValueError("server.token must be a Keychain or environment reference")
         return value
@@ -125,9 +125,7 @@ class LimitSettings(Section):
 
 class FederationSettings(Section):
     deadline_s: float = Field(default=8.0, gt=0, allow_inf_nan=False)
-    default_groups: list[str] = Field(
-        default_factory=lambda: ["scholarly", "preprints"]
-    )
+    default_groups: list[str] = Field(default_factory=lambda: ["scholarly", "preprints"])
 
 
 class CacheSettings(Section):
@@ -174,9 +172,7 @@ class NotifySettings(Section):
         if value is not None and (
             value.username or value.password or value.query or value.fragment
         ):
-            raise ValueError(
-                "notify.webhook_url must not contain credentials, query or fragment"
-            )
+            raise ValueError("notify.webhook_url must not contain credentials, query or fragment")
         return value
 
 
@@ -209,6 +205,7 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
         extra="forbid",
         hide_input_in_errors=True,
+        defer_build=True,
     )
 
     server: ServerSettings = Field(default_factory=ServerSettings)

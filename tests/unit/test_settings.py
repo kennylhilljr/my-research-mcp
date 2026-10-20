@@ -145,10 +145,7 @@ def test_paths_and_private_creation(tmp_path: Path) -> None:
     support = tmp_path / "Library/Application Support/research-mcp"
     assert settings.paths.state_dir == support
     assert settings.paths.data_dir == support / "cache"
-    assert (
-        settings.paths.model_cache_dir
-        == tmp_path / "Library/Caches/research-mcp/models"
-    )
+    assert settings.paths.model_cache_dir == tmp_path / "Library/Caches/research-mcp/models"
     assert settings.paths.log_dir == tmp_path / "Library/Logs/research-mcp"
     assert not support.exists()
     settings.create_directories()
@@ -169,9 +166,29 @@ def test_path_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert not settings.paths.data_dir.exists()
 
 
+def test_existing_parent_permissions(tmp_path: Path) -> None:
+    """AT-PLAT-09: Startup preserves permissions on preexisting shared parents."""
+    library = tmp_path / "Library"
+    library.mkdir(mode=0o755)
+    library.chmod(0o755)
+    settings = Settings()
+    settings.create_directories()
+    assert library.stat().st_mode & 0o777 == 0o755
+    assert settings.paths.state_dir.stat().st_mode & 0o777 == 0o700
+    assert settings.paths.data_dir.stat().st_mode & 0o777 == 0o700
+
+
 @pytest.mark.parametrize(
-    "host", ["0.0.0.0", "::", "192.168.1.1", "localhost", "bad-host"]
+    "email", ["", "missing-at", "@university.edu", "a@@university.edu", "a b@university.edu"]
 )
+def test_malformed_contact(email: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """AT-PLAT-11: Malformed contact values fail with a settings validation error."""
+    monkeypatch.setenv("RESEARCH_MCP_CONTACT__EMAIL", email)
+    with pytest.raises(ValidationError, match="contact.email"):
+        Settings()
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.168.1.1", "localhost", "bad-host"])
 def test_reject_non_loopback(host: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """AT-PLAT-10: Non-loopback addresses and unresolved names are rejected."""
     monkeypatch.setenv("RESEARCH_MCP_SERVER__HOST", host)
@@ -198,9 +215,7 @@ def test_accept_loopback(host: str, monkeypatch: pytest.MonkeyPatch) -> None:
         "invalid",
     ],
 )
-def test_reject_placeholder_contact(
-    domain: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_reject_placeholder_contact(domain: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """AT-PLAT-11: Reserved placeholder domains cannot be used as contact details."""
     monkeypatch.setenv("RESEARCH_MCP_CONTACT__EMAIL", "owner@" + domain)
     with pytest.raises(ValidationError, match="contact.email"):
