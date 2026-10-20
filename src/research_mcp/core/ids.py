@@ -100,7 +100,10 @@ def normalize_arxiv(s: str) -> tuple[str, int | None]:
     value = _resolver(_prefix(s, "arxiv"), {"arxiv.org", "www.arxiv.org"}, r"^(abs|pdf)/")
     value = re.sub(r"\.pdf$", "", value, flags=re.I)
     version_match = re.search(r"v([1-9][0-9]*)$", value, flags=re.I)
-    version = int(version_match[1]) if version_match else None
+    try:
+        version = int(version_match[1]) if version_match else None
+    except ValueError as exc:  # Python caps int() at 4300 digits.
+        raise IdentifierError("Invalid arXiv version") from exc
     if version_match:
         value = value[: version_match.start()]
     if "/" in value:
@@ -166,7 +169,8 @@ def normalize_rfc(s: str) -> str:
     )
     value = re.sub(r"^rfc\s*", "", value, flags=re.I)
     value = re.sub(r"\.(?:txt|html)$", "", value, flags=re.I)
-    return str(int(_match(value, r"\d+")))
+    # Strip zeros as text: int() rejects strings over 4300 digits.
+    return _match(value, r"\d+").lstrip("0") or "0"
 
 
 def normalize_handle(s: str) -> str:

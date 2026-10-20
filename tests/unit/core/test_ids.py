@@ -69,7 +69,15 @@ class IdentifierTests(unittest.TestCase):
         self.assertEqual(ids.normalize_arxiv("2410.18291"), ("2410.18291", None))
         self.assertEqual(ids.normalize_arxiv("HEP-TH/9901001v2"), ("hep-th/9901001", 2))
         self.assertEqual(ids.normalize_arxiv("math.ag/0301234"), ("math.AG/0301234", None))
-        for value in ["2410.123", "2410.123456", "2410.18291v0", "hep-th/123", "x"]:
+        for value in [
+            "2410.123",
+            "2410.123456",
+            "2410.18291v0",
+            "hep-th/123",
+            "x",
+            # Past Python's int() digit limit, which raises a bare ValueError.
+            "2410.18291v" + "1" * 5000,
+        ]:
             with self.assertRaises(ids.IdentifierError):
                 ids.normalize_arxiv(value)
 
@@ -112,6 +120,9 @@ class IdentifierTests(unittest.TestCase):
             ids.normalize_handle("https://hdl.handle.net/20.500.12345/abc/"),
             ids.normalize_handle("https://hdl.handle.net/20.500.12345/abc"),
         )
+        # RFC numbers lose leading zeros without int(), which caps digit count.
+        self.assertEqual(ids.normalize_rfc("RFC 000" + "9" * 5000), "9" * 5000)
+        self.assertEqual(ids.normalize_rfc("rfc0"), "0")
         for value in ["123/", "123/a" + chr(0xA0) + "b", "https://hdl.handle.net/123/a%0Ab"]:
             with self.subTest(value=value), self.assertRaises(ids.IdentifierError):
                 ids.normalize_handle(value)
