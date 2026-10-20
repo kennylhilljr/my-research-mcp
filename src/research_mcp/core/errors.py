@@ -44,13 +44,20 @@ class HttpError(ToolError):
     def __init__(
         self,
         code: ErrorCode,
-        message: str,
-        retryable: bool = False,
-        correlation_id: str | None = None,
-        *,
         status: int | None = None,
         retry_after_ms: int | None = None,
+        detail: str | None = None,
     ) -> None:
-        super().__init__(code, message, retryable, correlation_id)
+        super().__init__(
+            code,
+            "Upstream request failed",
+            retryable=code
+            in {
+                ErrorCode.RATE_LIMITED,
+                ErrorCode.UPSTREAM_ERROR,
+                ErrorCode.UPSTREAM_TIMEOUT,
+            },
+        )
         self.status = status
         self.retry_after_ms = retry_after_ms
+        self.detail = detail

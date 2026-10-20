@@ -1,16 +1,16 @@
-"""Immutable source policies, with no transport or credential access."""
+"""Immutable source policies with validators built on first use, not at import."""
 
 from collections.abc import Callable
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from pydantic.dataclasses import dataclass
 
 from research_mcp.core.errors import ErrorCode
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, config=ConfigDict(defer_build=True))
 class AuthSpec:
     secrets: tuple[str, ...]
     required: bool
@@ -43,7 +43,7 @@ class AuthSpec:
                 raise ValueError("Credential origin port must be positive")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, config=ConfigDict(defer_build=True))
 class RateSpec:
     rps: Annotated[float, Field(gt=0, allow_inf_nan=False)]
     burst: Annotated[int, Field(ge=1)] = 1
@@ -51,7 +51,7 @@ class RateSpec:
     daily_quota: Annotated[int, Field(ge=1)] | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, config=ConfigDict(defer_build=True))
 class ProbeSpec:
     cadence_s: Annotated[int, Field(gt=0)]
     cost: Literal["free", "metered"]
@@ -61,7 +61,7 @@ class ProbeSpec:
 ErrorClassifier = Callable[[int, bytes], tuple[ErrorCode, str | None] | None]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, config=ConfigDict(defer_build=True))
 class SourcePolicy:
     source: Annotated[str, Field(min_length=1)]
     hosts: frozenset[str]
@@ -73,9 +73,7 @@ class SourcePolicy:
 
     def __post_init__(self) -> None:
         if not self.hosts or any(
-            not host
-            or any(c in host for c in "/:@*?#")
-            or any(c.isspace() for c in host)
+            not host or any(c in host for c in "/:@*?#") or any(c.isspace() for c in host)
             for host in self.hosts
         ):
             raise ValueError("Policy hosts must be nonempty host names")

@@ -31,9 +31,7 @@ def test_budget_list_prefix_and_cursor():
     assert fit(original, 10000) == original
 
 
-@pytest.mark.parametrize(
-    "text", ["界🙂" * 1000, '"\\\n' * 1000], ids=["unicode", "escaped"]
-)
+@pytest.mark.parametrize("text", ["界🙂" * 1000, '"\\\n' * 1000], ids=["unicode", "escaped"])
 def test_budget_long_text(text):
     """AT-PLAT-31: Shorten Unicode and escaped text using actual JSON byte size."""
     original = ToolResult[Untrusted](
@@ -78,9 +76,7 @@ def test_signed_cursor_roundtrip_and_tampering():
     cursor = encode_cursor(payload, key)
     assert decode_cursor(cursor, key) == payload
     body, tag = cursor.split(".")
-    assert (
-        json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4))) == payload
-    )
+    assert json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4))) == payload
     changed = base64.urlsafe_b64encode(b'{"offset":999}').rstrip(b"=").decode()
     for bad in [
         "",

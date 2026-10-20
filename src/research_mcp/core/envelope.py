@@ -1,15 +1,13 @@
-"""Typed tool output and labels for externally fetched content."""
+"""Typed output and untrusted labels with validators deferred until first use."""
 
-from typing import Generic, Literal, TypeVar
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from research_mcp.core.errors import ErrorCode
 
-T = TypeVar("T")
 
-
-class SourceStatus(BaseModel):
+class SourceStatus(BaseModel, defer_build=True):
     source: str
     state: Literal[
         "ok",
@@ -28,13 +26,13 @@ class SourceStatus(BaseModel):
     error_code: ErrorCode | None = None
 
 
-class Untrusted(BaseModel):
+class Untrusted(BaseModel, defer_build=True):
     untrusted: Literal[True] = True
     source: str
     content: str
 
 
-class ToolResult(BaseModel, Generic[T]):
+class ToolResult[T](BaseModel, defer_build=True):
     data: T
     source_status: list[SourceStatus] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

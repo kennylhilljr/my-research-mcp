@@ -11,16 +11,12 @@ from research_mcp.testing.clock import FakeClock, FakeSleeper
 
 
 def auth(origin="https://api.example.test"):
-    return AuthSpec(
-        ("TEST_KEY",), True, "header", "X-Key", (origin,), "https://example.test"
-    )
+    return AuthSpec(("TEST_KEY",), True, "header", "X-Key", (origin,), "https://example.test")
 
 
 def test_policy_validation_and_immutability():
     """AT-PLAT-06: Policies validate rates, bounds, credential origins and enums."""
-    policy = SourcePolicy(
-        "test", frozenset({"api.example.test"}), auth(), RateSpec(1), 10, 1024
-    )
+    policy = SourcePolicy("test", frozenset({"api.example.test"}), auth(), RateSpec(1), 10, 1024)
     assert policy.rate.concurrency == 2
     with pytest.raises(FrozenInstanceError):
         policy.source = "other"
@@ -46,9 +42,7 @@ def test_policy_validation_and_immutability():
     with pytest.raises(ValueError):
         SourcePolicy("test", frozenset({"other.test"}), auth(), RateSpec(1), 10, 1024)
     with pytest.raises(ValidationError):
-        SourcePolicy(
-            "test", frozenset({"api.example.test"}), None, RateSpec(1), 0, 1024
-        )
+        SourcePolicy("test", frozenset({"api.example.test"}), None, RateSpec(1), 0, 1024)
 
 
 def test_search_bounds():
@@ -77,11 +71,10 @@ def test_search_bounds():
 def test_work_and_call_record():
     """AT-PLAT-06: Shared models validate nested records and telemetry bounds."""
     from research_mcp.core.ids import Identifier
-
     from research_mcp.core.models import CallRecord, Work, WorkRecord
 
     work = Work(
-        ids=[],
+        ids=[Identifier("doi", "10.1000/example")],
         title="A study",
         authors=[],
         year=None,
@@ -92,6 +85,7 @@ def test_work_and_call_record():
         found_in=["test"],
     )
     assert Work.model_validate_json(work.model_dump_json()) == work
+    assert Work.model_json_schema()["properties"]["ids"]["type"] == "array"
     assert work.cache_state == "none"
     now = datetime(2025, 1, 1, tzinfo=UTC)
     record = WorkRecord(

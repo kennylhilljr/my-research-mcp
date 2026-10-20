@@ -1,13 +1,13 @@
-"""Shared data contracts for adapters, services and platform ports."""
+"""Shared data contracts; defer validators to keep imports free of environment reads."""
 
 from datetime import date, datetime
 from enum import StrEnum
 from typing import Literal, Protocol, Self
 
 from pydantic import BaseModel, Field, JsonValue, model_validator
-from research_mcp.core.ids import Identifier as Identifier
 
 from research_mcp.core.envelope import SourceStatus
+from research_mcp.core.ids import Identifier as Identifier
 
 __all__ = [
     "Author",
@@ -49,13 +49,13 @@ class AuthUse(StrEnum):
     NONE = "none"
 
 
-class Author(BaseModel):
+class Author(BaseModel, defer_build=True):
     name: str
     family: str | None = None
     orcid: str | None = None
 
 
-class OaLocation(BaseModel):
+class OaLocation(BaseModel, defer_build=True):
     url: str
     source: str
     kind: Literal["pdf", "html", "landing"]
@@ -63,14 +63,14 @@ class OaLocation(BaseModel):
     version: str | None = None
 
 
-class Provenance(BaseModel):
+class Provenance(BaseModel, defer_build=True):
     source: str
     upstream_id: str
     adapter_version: str
     retrieved_at: datetime
 
 
-class WorkRecord(BaseModel):
+class WorkRecord(BaseModel, defer_build=True):
     ids: list[Identifier]
     title: str
     authors: list[Author] = Field(default_factory=list)
@@ -85,7 +85,7 @@ class WorkRecord(BaseModel):
     provenance: Provenance
 
 
-class SearchFilters(BaseModel):
+class SearchFilters(BaseModel, defer_build=True):
     year_from: int | None = Field(default=None, ge=1800, le=2100)
     year_to: int | None = Field(default=None, ge=1800, le=2100)
     work_type: str | None = None
@@ -104,31 +104,31 @@ class SearchFilters(BaseModel):
         return self
 
 
-class SearchRequest(BaseModel):
+class SearchRequest(BaseModel, defer_build=True):
     query: str = Field(min_length=1, max_length=500)
     filters: SearchFilters = Field(default_factory=SearchFilters)
     limit: int = Field(default=10, ge=1, le=25)
     cursor: str | None = None
 
 
-class SearchPage(BaseModel):
+class SearchPage(BaseModel, defer_build=True):
     records: list[WorkRecord]
     total: int | None = Field(default=None, ge=0)
     next_cursor: str | None = None
 
 
-class FulltextCandidate(BaseModel):
+class FulltextCandidate(BaseModel, defer_build=True):
     location: OaLocation
     priority: int
 
 
-class CitationPage(BaseModel):
+class CitationPage(BaseModel, defer_build=True):
     ids: list[Identifier]
     records: list[WorkRecord] = Field(default_factory=list)
     next_cursor: str | None = None
 
 
-class ProbeResult(BaseModel):
+class ProbeResult(BaseModel, defer_build=True):
     ok: bool
     latency_ms: int = Field(ge=0)
     shape_ok: bool
@@ -137,12 +137,12 @@ class ProbeResult(BaseModel):
     credential_expires_at: datetime | None = None
 
 
-class Conflict(BaseModel):
+class Conflict(BaseModel, defer_build=True):
     field: str
     values: dict[str, JsonValue]
 
 
-class Work(BaseModel):
+class Work(BaseModel, defer_build=True):
     work_id: str | None = None
     ids: list[Identifier]
     title: str
@@ -159,20 +159,20 @@ class Work(BaseModel):
     cache_state: str = "none"
 
 
-class FederatedResult(BaseModel):
+class FederatedResult(BaseModel, defer_build=True):
     works: list[Work]
     statuses: list[SourceStatus]
     next_cursor: str | None
 
 
-class TextResponse(BaseModel):
+class TextResponse(BaseModel, defer_build=True):
     url: str
     status: int = Field(ge=100, le=599)
     content_type: str
     text: str
 
 
-class DownloadedFile(BaseModel):
+class DownloadedFile(BaseModel, defer_build=True):
     sha256: str
     size: int = Field(ge=0)
     media_type: str
@@ -183,7 +183,7 @@ class DownloadedFile(BaseModel):
     last_modified: str | None
 
 
-class CallRecord(BaseModel):
+class CallRecord(BaseModel, defer_build=True):
     ts: datetime
     source: str
     op: str

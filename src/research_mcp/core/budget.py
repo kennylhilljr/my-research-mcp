@@ -1,19 +1,20 @@
 """Bound serialized envelopes and authenticate opaque pagination cursors."""
 
+from __future__ import annotations
+
 import base64
 import binascii
 import hashlib
 import hmac
 import json
 from collections.abc import Callable, Iterator
-from typing import Any, TypeVar
+from typing import Any
 
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from research_mcp.core.envelope import ToolResult
 from research_mcp.core.errors import ErrorCode, ToolError
 
-T = TypeVar("T")
 TRUNCATION_MARKER = "[truncated]"
 _PROTECTED = {
     "next_cursor",
@@ -54,7 +55,7 @@ def _size(value: BaseModel) -> int:
     return len(value.model_dump_json().encode("utf-8"))
 
 
-def _trim_lists(
+def _trim_lists[T](
     payload: dict[str, Any],
     candidate: Callable[[], ToolResult[T] | None],
     fits: Callable[[], ToolResult[T] | None],
@@ -81,7 +82,7 @@ def _trim_lists(
     return None
 
 
-def _trim_text(
+def _trim_text[T](
     payload: dict[str, Any],
     candidate: Callable[[], ToolResult[T] | None],
     fits: Callable[[], ToolResult[T] | None],
@@ -112,20 +113,14 @@ def _trim_text(
     return None
 
 
-def fit(result: ToolResult[T], limit_bytes: int = 64 * 1024) -> ToolResult[T]:
+def fit[T](result: ToolResult[T], limit_bytes: int = 64 * 1024) -> ToolResult[T]:
     """Return a validated copy; fail if mandatory metadata cannot fit.
 
     Data lists lose trailing items before text is shortened. Source statuses,
     source labels and cursors are never rewritten. The input is not mutated.
     """
-    if (
-        isinstance(limit_bytes, bool)
-        or not isinstance(limit_bytes, int)
-        or limit_bytes < 1
-    ):
-        raise ToolError(
-            ErrorCode.INVALID_ARGUMENT, "Budget must be a positive byte count"
-        )
+    if isinstance(limit_bytes, bool) or not isinstance(limit_bytes, int) or limit_bytes < 1:
+        raise ToolError(ErrorCode.INVALID_ARGUMENT, "Budget must be a positive byte count")
     if _size(result) <= limit_bytes:
         return result.model_copy(deep=True)
     payload = result.model_dump(mode="json")
@@ -149,9 +144,7 @@ def fit(result: ToolResult[T], limit_bytes: int = 64 * 1024) -> ToolResult[T]:
     value = fits()
     if value is not None:
         return value
-    raise ToolError(
-        ErrorCode.TOO_LARGE, "Required result fields exceed the response budget"
-    )
+    raise ToolError(ErrorCode.TOO_LARGE, "Required result fields exceed the response budget")
 
 
 def _b64encode(value: bytes) -> str:
@@ -159,9 +152,7 @@ def _b64encode(value: bytes) -> str:
 
 
 def _b64decode(value: str) -> bytes:
-    decoded = base64.b64decode(
-        value + "=" * (-len(value) % 4), altchars=b"-_", validate=True
-    )
+    decoded = base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
     if _b64encode(decoded) != value:
         raise ValueError("Noncanonical base64url")
     return decoded
@@ -171,9 +162,7 @@ def encode_cursor(payload: dict[str, JsonValue], key: bytes) -> str:
     """Sign a JSON object using the caller's daemon-derived key."""
     if not key:
         raise ValueError("Cursor signing key must not be empty")
-    body = json.dumps(
-        payload, sort_keys=True, separators=(",", ":"), allow_nan=False
-    ).encode()
+    body = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     tag = hmac.digest(key, body, hashlib.sha256)
     return f"{_b64encode(body)}.{_b64encode(tag)}"
 
@@ -192,6 +181,4 @@ def decode_cursor(cursor: str, key: bytes) -> dict[str, JsonValue]:
             raise ValueError("Expected object")
         return payload
     except (ValueError, UnicodeError, binascii.Error):
-        raise ToolError(
-            ErrorCode.INVALID_ARGUMENT, "Invalid pagination cursor"
-        ) from None
+        raise ToolError(ErrorCode.INVALID_ARGUMENT, "Invalid pagination cursor") from None
