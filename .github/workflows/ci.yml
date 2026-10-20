@@ -54,4 +54,4 @@ jobs:
           uv export --frozen --all-extras --no-emit-project --no-hashes
           --format requirements-txt --output-file requirements-audit.txt
       - name: Audit them against known vulnerabilities
-        run: uvx pip-audit --requirement requirements-audit.txt
+        run: uvx pip-audit==2.9.0 --requirement requirements-audit.txt
