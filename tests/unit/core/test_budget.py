@@ -1,7 +1,9 @@
 import base64
 import json
+from typing import Annotated
 
 import pytest
+from pydantic import Field
 
 from research_mcp.core.budget import (
     TRUNCATION_MARKER,
@@ -99,6 +101,26 @@ def test_budget_keeps_federation_statuses():
         fit(original, 350)
     assert error.value.code == ErrorCode.TOO_LARGE
     assert original.data.statuses == statuses
+
+
+def test_budget_prefix_respects_schema_minimum():
+    """AT-PLAT-31: A schema-invalid short prefix does not hide a longer one that fits."""
+    original = ToolResult[Annotated[list[int], Field(min_length=8)]](
+        data=list(range(10)), next_cursor="keep"
+    )
+    bound = len(
+        original.model_copy(update={"data": original.data[:8], "truncated": True})
+        .model_dump_json()
+        .encode()
+    )
+    result = fit(original, bound)
+    assert result.data == list(range(8))
+    assert result.truncated and result.next_cursor == "keep"
+    text = ToolResult[Annotated[str, Field(min_length=40)]](data="x" * 200)
+    bound = len(text.model_copy(update={"data": "x" * 40, "truncated": True}).model_dump_json())
+    shortened = fit(text, bound)
+    assert len(shortened.model_dump_json().encode()) <= bound
+    assert len(shortened.data) == 40 and shortened.data.endswith(TRUNCATION_MARKER)
 
 
 def test_signed_cursor_roundtrip_and_tampering():
