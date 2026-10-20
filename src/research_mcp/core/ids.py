@@ -172,8 +172,12 @@ def normalize_dspace_uuid(s: str) -> str:
 
 
 def normalize_github(s: str) -> str:
-    value = _resolver(_prefix(s, "github"), {"github.com", "www.github.com"}).lower()
-    value = re.sub(r"\.git$", "", value)
+    raw = _prefix(s, "github")
+    value = _resolver(raw, {"github.com", "www.github.com"}).lower()
+    # Only a clone URL carries a .git suffix; the bare owner/repo form is canonical
+    # and kept as given, so normalizing twice cannot strip a second suffix.
+    if "://" in raw:
+        value = value.removesuffix(".git")
     return _match(value, r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/[a-z0-9_.-]+")
 
 

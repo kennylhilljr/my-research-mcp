@@ -142,6 +142,8 @@ class IdentifierTests(unittest.TestCase):
             ("1234.56789/AbC", "handle", "1234.56789/AbC"),
             ("github:Owner/Repo", "github", "owner/repo"),
             ("https://github.com/Owner/Repo.git", "github", "owner/repo"),
+            ("https://github.com/Owner/Repo.git.git", "github", "owner/repo.git"),
+            ("github:owner/repo.git", "github", "owner/repo.git"),
             ("https://pubmed.ncbi.nlm.nih.gov/123/", "pmid", "123"),
             ("https://pmc.ncbi.nlm.nih.gov/articles/PMC123/", "pmcid", "PMC123"),
             ("https://api.openalex.org/works/W123", "openalex", "W123"),
@@ -205,6 +207,8 @@ class IdentifierTests(unittest.TestCase):
                 True,
             ),
             (ids.normalize_github, "Owner/Repo" + n, True),
+            (ids.normalize_github, "https://github.com/Owner/Repo" + n + ".git.git", True),
+            (ids.normalize_github, "github:Owner/Repo" + n + ".git", True),
             (ids.normalize_url, "https://example.org/Case?x=" + n, False),
         ]
         for normalizer, value, case_insensitive in cases:
