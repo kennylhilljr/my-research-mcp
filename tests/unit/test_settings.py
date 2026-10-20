@@ -179,7 +179,19 @@ def test_existing_parent_permissions(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "email", ["", "missing-at", "@university.edu", "a@@university.edu", "a b@university.edu"]
+    "email",
+    [
+        "",
+        "missing-at",
+        "@university.edu",
+        "a@@university.edu",
+        "a b@university.edu",
+        "a@.edu",
+        "a@university..edu",
+        "a@-university.edu",
+        "a@university-.edu",
+        "a@university/department.edu",
+    ],
 )
 def test_malformed_contact(email: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """AT-PLAT-11: Malformed contact values fail with a settings validation error."""
@@ -227,3 +239,23 @@ def test_optional_contact(monkeypatch: pytest.MonkeyPatch) -> None:
     assert Settings().contact.email is None
     monkeypatch.setenv("RESEARCH_MCP_CONTACT__EMAIL", "researcher@university.edu")
     assert Settings().contact.email == "researcher@university.edu"
+
+
+@pytest.mark.parametrize(
+    ("section", "setting", "value", "location"),
+    [
+        ("server", "port", "70000", "server.port"),
+        ("server", "host", '"192.168.1.1"', "server.host"),
+        ("contact", "email", '"owner@example.com"', "contact.email"),
+        ("cache", "retention_days", "0", "cache.retention_days"),
+    ],
+)
+def test_invalid_config_values(
+    tmp_path: Path, section: str, setting: str, value: str, location: str
+) -> None:
+    """AT-PLAT-08: TOML values receive the same validation as environment overrides."""
+    config = tmp_path / ".config/research-mcp/config.toml"
+    config.parent.mkdir(parents=True)
+    config.write_text(f"[{section}]\n{setting} = {value}\n", encoding="utf-8")
+    with pytest.raises(ValidationError, match=location):
+        Settings()

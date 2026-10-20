@@ -1,5 +1,6 @@
 """Validated configuration. Loading and directory creation are explicit startup work."""
 
+import re
 from datetime import date
 from ipaddress import ip_address
 from pathlib import Path
@@ -106,6 +107,10 @@ class ContactSettings(Section):
             or "@" in local
             or "." not in domain
             or any(character.isspace() for character in value)
+            or any(
+                re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label) is None
+                for label in domain.split(".")
+            )
         ):
             raise ValueError("contact.email must be a valid email address")
         if any(
