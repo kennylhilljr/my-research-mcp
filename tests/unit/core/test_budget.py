@@ -11,6 +11,7 @@ from research_mcp.core.budget import (
 )
 from research_mcp.core.envelope import SourceStatus, ToolResult, Untrusted
 from research_mcp.core.errors import ErrorCode, ToolError
+from research_mcp.core.models import FederatedResult, Work
 
 
 def test_budget_list_prefix_and_cursor():
@@ -67,6 +68,37 @@ def test_impossible_budget_preserves_metadata():
     with pytest.raises(ToolError) as error:
         fit(result, 0)
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
+
+
+def test_budget_keeps_federation_statuses():
+    """AT-PLAT-31: Federated statuses survive trimming; fail when they cannot fit."""
+    statuses = [SourceStatus(source=f"source{i}", state="timeout") for i in range(10)]
+    work = Work(
+        ids=[],
+        title="t" * 200,
+        authors=[],
+        year=None,
+        venue=None,
+        work_type="article",
+        abstract=None,
+        oa_locations=[],
+        found_in=[],
+    )
+    federated = FederatedResult(works=[work] * 5, statuses=statuses, next_cursor="next")
+    original = ToolResult[FederatedResult](data=federated)
+    bound = len(
+        ToolResult[FederatedResult](data=federated.model_copy(update={"works": []}), truncated=True)
+        .model_dump_json()
+        .encode()
+    )
+    result = fit(original, bound)
+    assert result.truncated and result.data.works == []
+    assert result.data.statuses == statuses
+    assert result.data.next_cursor == "next"
+    with pytest.raises(ToolError) as error:
+        fit(original, 350)
+    assert error.value.code == ErrorCode.TOO_LARGE
+    assert original.data.statuses == statuses
 
 
 def test_signed_cursor_roundtrip_and_tampering():

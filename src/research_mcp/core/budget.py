@@ -22,6 +22,7 @@ _PROTECTED = {
     "source",
     "untrusted",
     "source_status",
+    "statuses",
     "warnings",
 }
 
