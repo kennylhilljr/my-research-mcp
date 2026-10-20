@@ -17,6 +17,22 @@
       "when_paths": [
         "src/research_mcp/ui/**"
       ]
+    },
+    "security_reviewer": {
+      "panel": [
+        "codex",
+        "gemini",
+        "kimi",
+        "claude"
+      ]
+    },
+    "product_owner": {
+      "panel": [
+        "kimi",
+        "gemini",
+        "codex",
+        "claude"
+      ]
     }
   },
   "milestone": {
